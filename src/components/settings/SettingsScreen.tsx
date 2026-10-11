@@ -1,6 +1,7 @@
 import { CloudManager } from "@/components/settings/CloudManager";
 import { DocsManager } from "@/components/settings/DocsManager";
 import { ModelsManager } from "@/components/settings/ModelsManager";
+import { StorageUsage } from "@/components/settings/StorageUsage";
 
 export function SettingsScreen() {
   return (
@@ -8,6 +9,7 @@ export function SettingsScreen() {
       <ModelsManager />
       <CloudManager />
       <DocsManager />
+      <StorageUsage />
     </div>
   );
 }

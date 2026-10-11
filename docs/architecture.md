@@ -21,7 +21,7 @@ Everything marked **Verified** was checked against the live services on 2026-10-
 
 - All network downloads (manifest, docs, models) run in Rust. The webview only talks to the local
   `llama-server` on `127.0.0.1`, which the CSP enforces (`connect-src`). The only other hosts are the optional cloud providers
-  (OpenRouter, OpenAI), called from the webview with the user's own API key, stored in `settings.json`.
+  (OpenRouter, OpenAI), called from the webview with the user's own API key, stored in the OS keychain (service `scholion`, account `cloud-api-key`; `settings.json` keeps it blank).
 - No Node server: the AI SDK runs in the webview, with a custom `ChatTransport` that calls
   `streamText` directly and returns `result.toUIMessageStream()`.
 

@@ -6,8 +6,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use serde::Serialize;
-use tauri::State;
 use tauri::ipc::Channel;
+use tauri::{Manager, State};
 
 use crate::docs::intent::{self, DocIntent};
 use crate::docs::manifest::{self, CachedManifest, DocEntry};
@@ -135,12 +135,12 @@ async fn blocking<T: Send + 'static>(f: impl FnOnce() -> Result<T> + Send + 'sta
 
 #[tauri::command]
 pub fn get_settings(state: State<'_, AppState>) -> Result<Settings> {
-    settings::load(&state.data_dir)
+    settings::load_with_key(&state.data_dir)
 }
 
 #[tauri::command]
 pub fn set_settings(state: State<'_, AppState>, settings: Settings) -> Result<()> {
-    settings::save(&state.data_dir, &settings)
+    settings::save_with_key(&state.data_dir, &settings)
 }
 
 /// Conversations are opaque JSON for Rust: the frontend owns their shape.
@@ -158,6 +158,38 @@ pub async fn set_history(
 ) -> Result<()> {
     let path = storage::history_path(&state.data_dir);
     blocking(move || storage::write_json_atomic(&path, &conversations)).await
+}
+
+#[derive(Serialize)]
+pub struct StorageUsage {
+    pub models: u64,
+    pub docs: u64,
+    pub history: u64,
+}
+
+/// Bytes taken on disk by the models, the installed docs and the conversation history.
+#[tauri::command]
+pub async fn get_storage_usage(state: State<'_, AppState>) -> Result<StorageUsage> {
+    let dir = state.data_dir.clone();
+    blocking(move || {
+        Ok(StorageUsage {
+            models: storage::disk_usage(&storage::models_dir(&dir))?,
+            docs: storage::disk_usage(&storage::docs_dir(&dir))?,
+            history: storage::disk_usage(&storage::history_path(&dir))?,
+        })
+    })
+    .await
+}
+
+/// Saves an exported conversation or answer in the Downloads folder; returns the file path.
+#[tauri::command]
+pub async fn save_export(app: tauri::AppHandle, name: String, content: String) -> Result<String> {
+    let dir = app
+        .path()
+        .download_dir()
+        .map_err(|e| AppError::other(format!("No Downloads folder: {e}")))?;
+    let path = blocking(move || storage::write_new_file(&dir, &name, &content)).await?;
+    Ok(path.to_string_lossy().into_owned())
 }
 
 /// Bytes free for this user on the disk holding the app data (docs and models).

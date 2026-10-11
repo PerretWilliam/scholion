@@ -60,7 +60,7 @@ export function CloudManager() {
         </h2>
         <p className="text-muted-foreground text-xs">
           Optional. Your questions and the doc passages are sent to the provider, and the API key is
-          stored on this computer. Leave it off to stay fully offline.
+          stored in the system keychain. Leave it off to stay fully offline.
         </p>
       </div>
 

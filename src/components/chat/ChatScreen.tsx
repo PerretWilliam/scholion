@@ -1,3 +1,4 @@
+import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { Settings } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Chat } from "@/components/chat/Chat";
@@ -21,6 +22,7 @@ import {
   loadConversations,
   saveConversations,
   titleOf,
+  toMarkdown,
   upsert,
 } from "@/lib/history";
 import {
@@ -30,6 +32,7 @@ import {
   getModels,
   getSettings,
   type ModelStatus,
+  saveExport,
   setActiveModel,
   setSettings,
 } from "@/lib/ipc";
@@ -60,6 +63,10 @@ export function ChatScreen({ visible, onOpenSettings }: Props) {
   const [useCloud, setUseCloud] = useState(false);
   const cloud = useCloud ? cloudConfig : null;
   const [error, setError] = useState<string | null>(null);
+  /** Path of the last exported file, until dismissed. */
+  const [exported, setExported] = useState<string | null>(null);
+  /** Conversations answering right now. */
+  const [busy, setBusy] = useState<ReadonlySet<string>>(new Set());
 
   const reloadDocs = useCallback(async () => {
     const [{ installed }, overview, settings] = await Promise.all([
@@ -144,10 +151,12 @@ export function ChatScreen({ visible, onOpenSettings }: Props) {
   /** `id` is fixed per mounted chat, so this never saves to the wrong conversation. */
   function saveMessages(id: string, messages: ChatMessage[], chatSlug: string) {
     if (messages.length === 0) return;
+    const saved = conversationsRef.current.find((c) => c.id === id);
     persist(
       upsert(conversationsRef.current, {
         id,
-        title: titleOf(messages),
+        title: saved?.renamed ? saved.title : titleOf(messages),
+        renamed: saved?.renamed,
         updatedAt: Date.now(),
         slug: chatSlug,
         messages,
@@ -155,11 +164,62 @@ export function ChatScreen({ visible, onOpenSettings }: Props) {
     );
   }
 
+  function renameConversation(id: string, title: string) {
+    persist(
+      conversationsRef.current.map((c) => (c.id === id ? { ...c, title, renamed: true } : c)),
+    );
+  }
+
+  async function exportConversation(id: string) {
+    const saved = conversationsRef.current.find((c) => c.id === id);
+    if (!saved) return;
+    try {
+      setExported(await saveExport(`${saved.title}.md`, toMarkdown(saved)));
+    } catch (e) {
+      setError(`Could not export the conversation: ${e}`);
+    }
+  }
+
+  function setChatBusy(id: string, running: boolean) {
+    setBusy((ids) => {
+      if (ids.has(id) === running) return ids;
+      const next = new Set(ids);
+      if (running) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
   function deleteConversation(id: string) {
     persist(conversationsRef.current.filter((c) => c.id !== id));
     setOpened((ids) => ids.filter((x) => x !== id));
     if (id === currentId) open(crypto.randomUUID());
   }
+
+  // Shortcuts: ⌘/Ctrl+N new chat, +K question field, +D next doc (with Shift: previous).
+  useEffect(() => {
+    if (!visible) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (!(e.metaKey || e.ctrlKey) || e.altKey) return;
+      const key = e.key.toLowerCase();
+      if (key === "n") {
+        if (conversationsRef.current.some((c) => c.id === currentId)) open(crypto.randomUUID());
+      } else if (key === "k") {
+        const fields = document.querySelectorAll<HTMLTextAreaElement>(
+          'textarea[aria-label="Question"]',
+        );
+        [...fields].find((f) => f.offsetParent !== null)?.focus();
+      } else if (key === "d" && docs && docs.length > 1) {
+        const at = docs.findIndex((d) => d.slug === slug);
+        setSlug(docs[(at + (e.shiftKey ? -1 : 1) + docs.length) % docs.length]?.slug ?? slug);
+      } else {
+        return;
+      }
+      e.preventDefault();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  });
 
   const context = useRef<ChatContext>({ slug, model: model ?? null, cloud, selectDoc: setSlug });
   context.current = { slug, model: model ?? null, cloud, selectDoc: setSlug };
@@ -194,12 +254,33 @@ export function ChatScreen({ visible, onOpenSettings }: Props) {
           {error}
         </p>
       )}
+      {exported && (
+        <p
+          role="status"
+          className="mx-auto flex w-full max-w-3xl items-center gap-2 px-6 pt-4 text-sm"
+        >
+          <span className="min-w-0 truncate">Saved to {exported}</span>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => revealItemInDir(exported).catch((e) => setError(String(e)))}
+          >
+            Show in folder
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setExported(null)}>
+            Dismiss
+          </Button>
+        </p>
+      )}
       {model || cloud ? (
         <DocActions value={actions}>
           <div className="flex min-h-0 flex-1">
             <Sidebar
               conversations={conversations ?? []}
               currentId={currentId}
+              busy={busy}
+              onRename={renameConversation}
+              onExport={exportConversation}
               onSelect={select}
               onNew={() => open(crypto.randomUUID())}
               onDelete={deleteConversation}
@@ -211,6 +292,7 @@ export function ChatScreen({ visible, onOpenSettings }: Props) {
                     <Chat
                       context={context}
                       active={id === currentId}
+                      onBusy={(running) => setChatBusy(id, running)}
                       initialMessages={conversations.find((c) => c.id === id)?.messages ?? []}
                       onMessages={(messages, chatSlug) => saveMessages(id, messages, chatSlug)}
                       leftTools={docPicker}

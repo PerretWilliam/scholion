@@ -29,6 +29,8 @@ htmd = "0.5"
 strsim = "0.11"
 markup5ever_rcdom = "0.38"
 fs4 = "1"
+# OS keychain for the cloud API key.
+keyring = "4"
 
 # Verifying multi-GB models takes minutes with an unoptimized sha2.
 [profile.dev.package.sha2]

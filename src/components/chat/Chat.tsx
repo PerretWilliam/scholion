@@ -14,7 +14,14 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import type { ChatTransport } from "ai";
 import DOMPurify from "dompurify";
 import { ArrowUp, Check, Copy, RotateCcw, Square } from "lucide-react";
-import { type ComponentProps, type ReactNode, type RefObject, useMemo, useRef } from "react";
+import {
+  type ComponentProps,
+  type ReactNode,
+  type RefObject,
+  useEffect,
+  useMemo,
+  useRef,
+} from "react";
 import { type Components, Streamdown } from "streamdown";
 import { InstallDocCard, UnknownDocNotice } from "@/components/chat/InstallDocCard";
 import { DocIcon } from "@/components/DocIcon";
@@ -34,6 +41,8 @@ interface ChatProps {
   rightTools: ReactNode;
   /** Messages of a saved conversation; read once, so remount (`key`) to switch conversations. */
   initialMessages: ChatMessage[];
+  /** Called when this conversation starts or stops answering. */
+  onBusy: (busy: boolean) => void;
   /** False while another conversation is shown: this one keeps answering in the background. */
   active: boolean;
   /**
@@ -49,6 +58,7 @@ export function Chat({
   rightTools,
   initialMessages,
   active,
+  onBusy,
   onMessages,
 }: ChatProps) {
   // Refs, because the runtime keeps the callbacks it was created with.
@@ -84,6 +94,7 @@ export function Chat({
   });
   return (
     <AssistantRuntimeProvider runtime={runtime}>
+      <BusyReporter onBusy={onBusy} />
       <ThreadPrimitive.Root className="flex h-full flex-col">
         <ThreadPrimitive.Viewport className="flex-1 overflow-y-auto">
           <div className="mx-auto max-w-3xl space-y-6 p-6">
@@ -91,6 +102,8 @@ export function Chat({
               <p className="pt-12 text-center text-muted-foreground text-sm">
                 Ask a question about the selected documentation, for example “how do I copy a
                 string?”
+                <br />
+                Shortcuts: ⌘/Ctrl+N new chat · +K question field · +D next documentation
               </p>
             </AuiIf>
             <ThreadPrimitive.Messages>
@@ -102,6 +115,18 @@ export function Chat({
       </ThreadPrimitive.Root>
     </AssistantRuntimeProvider>
   );
+}
+
+/** Tells the sidebar whether this conversation is answering. */
+function BusyReporter({ onBusy }: { onBusy: (busy: boolean) => void }) {
+  const running = useAuiState((s) => s.thread.isRunning);
+  const report = useRef(onBusy);
+  report.current = onBusy;
+  useEffect(() => {
+    report.current(running);
+    return () => report.current(false);
+  }, [running]);
+  return null;
 }
 
 function Composer({ leftTools, rightTools }: Pick<ChatProps, "leftTools" | "rightTools">) {

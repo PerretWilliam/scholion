@@ -52,6 +52,8 @@ pub fn run() {
             commands::get_history,
             commands::set_history,
             commands::free_disk_space,
+            commands::get_storage_usage,
+            commands::save_export,
             commands::start_llm,
             commands::get_models,
             commands::download_model,

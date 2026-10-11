@@ -138,6 +138,18 @@ export const setActiveModel = (file: string) => invoke<void>("set_active_model",
 /** Bytes free on the disk holding docs and models. */
 export const freeDiskSpace = () => invoke<number>("free_disk_space");
 
+export interface StorageUsage {
+  models: number;
+  docs: number;
+  history: number;
+}
+
+export const getStorageUsage = () => invoke<StorageUsage>("get_storage_usage");
+
+/** Writes `content` in the Downloads folder under a free name; returns the path. */
+export const saveExport = (name: string, content: string) =>
+  invoke<string>("save_export", { name, content });
+
 export const getSettings = () => invoke<Settings>("get_settings");
 
 export const setSettings = (settings: Settings) => invoke<void>("set_settings", { settings });
