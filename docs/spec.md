@@ -89,6 +89,8 @@ Verified versions, URLs and formats: see [architecture.md](architecture.md).
   names, search finds entries, and the top 2–3 pages are pulled from `db.json`.
 - Convert page HTML to clean text (keep code blocks, signature, description) and truncate to fit
   the model context.
+- Follow-up questions ("and with a dict?") are first rewritten into standalone questions from the
+  last turns, so the search sees what they mean.
 - Possible later improvement: lightweight embeddings for semantic search.
 
 ### 3. Model manager
@@ -109,17 +111,24 @@ Verified versions, URLs and formats: see [architecture.md](architecture.md).
   of inventing.
 - After the answer, the model proposes up to 3 follow-up questions, shown as buttons that ask the
   question when clicked.
+- Statements taken from a passage carry its number in square brackets (`[1]`); a click opens that
+  page in the reader. Anything else is left out or marked "(general knowledge)".
 - Streamed answer in the UI, via llama.cpp's local OpenAI-compatible server and the AI SDK.
 - Do not rebuild generic chat pieces (scrolling, message list, Markdown rendering, copy code):
   the libraries above handle them.
-- Always show under the answer: the source page(s) (title and link to the official page) and the
-  doc attribution.
+- Always show under the answer: the source page(s) (numbered, opening in the in-app reader) and
+  the doc attribution.
 
 ### 5. Interface
 
 - Main screen: answers with their sources, then the question field. Under it, like in Claude: the
   doc picker on the left (with each doc's logo), the model picker on the right.
-- Settings screen: doc manager and model manager.
+- In-app reader: cited pages and search results open next to the chat, fully offline, with syntax
+  highlighting, find in page, full screen, and a link to devdocs.io.
+- History: conversations are saved locally, searchable, renamable, exportable to Markdown.
+  Shortcuts: ⌘/Ctrl+N new chat, +K question field, +D next doc.
+- Settings screen: doc manager, model manager, storage usage, optional cloud provider (API key in
+  the OS keychain).
 - First launch: offer to install a model and one or two docs, showing disk space.
 - Without a model, the main screen falls back to searching doc entries directly ("search only"),
   with a link to download a model. There is no mode switch: asking is the point of the app.
@@ -137,4 +146,4 @@ Verified versions, URLs and formats: see [architecture.md](architecture.md).
 
 ## Out of scope for v1
 
-Web search, non-DevDocs docs (Dash, Zeal, custom docs), embeddings, conversation history.
+Web search, non-DevDocs docs (Dash, Zeal, custom docs), embeddings.

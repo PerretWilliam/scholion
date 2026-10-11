@@ -145,11 +145,14 @@ Because llama-server sends `Access-Control-Allow-Origin`, the plain webview `fet
    queries of 3+ chars). Ties go to the shorter name.
 2. **Page full text** fills the remaining slots: FTS5 `porter unicode61`, contentless, over each
    page converted to Markdown at install time. The query becomes an `OR` of quoted words, so user
-   input is never parsed as FTS syntax. Ranked by bm25.
+   input is never parsed as FTS syntax. Stop words (English and French) are dropped. The best
+   `limit * 8` candidates by bm25 are reranked by title overlap (4-letter stems), so a page named
+   after the question beats one that merely mentions it.
 
 Measured: installing Python 3.15 (22 MB of HTML) takes ~2 s and 27 MB on disk.
 
-Pages render in the webview as DevDocs HTML **sanitized with DOMPurify**, plus the CSP. Link
+Pages render in the webview as DevDocs HTML **sanitized with DOMPurify** (`style` and `form`
+  forbidden), plus the CSP. Link
 clicks are intercepted: same-doc links open in the app, others in the system browser.
 
 ## Chat pipeline (`src/lib/chat-transport.ts`)
@@ -166,17 +169,22 @@ For each question, in the webview:
      nothing downloaded without a click). After installing, the question is answered if it was
      more than a bare request ("I want the Rust docs");
    - "Foo docs" with no match → say so and suggest close names.
-2. **Search terms**: a short non-streamed call (`temperature 0`, 40 tokens) turns the question into
+2. **Rewrite** (follow-ups only, `needsRewrite`): short questions or ones with a reference word
+   ("it", "that", "ça") are rewritten into a standalone question from the last 4 turns
+   (`temperature 0`, 80 tokens). A failed or empty rewrite keeps the original question. Long
+   self-contained questions skip this step.
+3. **Search terms**: a short non-streamed call (`temperature 0`, 40 tokens) turns the question into
    English names and words. One French → English example in the prompt makes Qwen3.5 4B reply
    with English API names for non-English questions (measured). A reply that echoes the question
    is dropped (the 0.8B model does this).
-3. **Pages**: each term is searched by name (2 hits), then the question plus terms in full text.
+4. **Pages**: each term is searched by name (2 hits), then the question plus terms in full text.
    The first 4 distinct pages are kept.
-4. **Passages** (`get_passage`): page HTML from the entry's `#anchor` on, converted to Markdown and
+5. **Passages** (`get_passage`): page HTML from the entry's `#anchor` on, converted to Markdown and
    cut at 4000 characters (`PASSAGE_CHARS`). Four passages, the prompt and a 1536-token answer
    fit the 8192-token context.
-5. **Answer**: `streamText` at `temperature 0.2`, single turn (earlier messages are not sent: they
-   would crowd out the passages). Sources (titles, `devdocs.io` URLs from the index, doc name,
+6. **Answer**: `streamText` at `temperature 0.2`, single turn (earlier messages are not sent: they
+   would crowd out the passages; they only serve the rewrite). The prompt asks for `[n]`
+   citations, which `linkCitations` turns into links to the n-th source. Sources (titles, `devdocs.io` URLs from the index, doc name,
    version, attribution) travel as a `data-sources` part, never through the model.
 
 Measured with Qwen3.5 4B on an Apple Silicon Mac: about 5 s from question to finished answer once
