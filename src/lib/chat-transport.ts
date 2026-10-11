@@ -98,7 +98,7 @@ function writeText(writer: Writer, text: string) {
   writer.write({ type: "text-end", id });
 }
 
-// ponytail: single-turn. Only the last question is sent: the 4096-token context holds the
+// ponytail: single-turn. Only the last question is sent: the 8192-token context holds the
 // passages; earlier turns would crowd them out.
 async function answer(
   writer: Writer,
