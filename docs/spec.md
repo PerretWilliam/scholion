@@ -104,8 +104,8 @@ Verified versions, URLs and formats: see [architecture.md](architecture.md).
 ### 4. Answer generation
 
 - System prompt: answer only from the provided passages, in the language of the question, as
-  documentation: signature, what it does, how it works, example, and complexity when relevant
-  (standard knowledge, marked as such). If the passages do not contain the answer, say so instead
+  documentation, with sections adapted to the question (signature, behavior, examples, pitfalls,
+  alternatives...). Complexity only when it applies (standard knowledge, marked as such). If the passages do not contain the answer, say so instead
   of inventing.
 - After the answer, the model proposes up to 3 follow-up questions, shown as buttons that ask the
   question when clicked.
