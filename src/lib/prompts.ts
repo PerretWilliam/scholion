@@ -57,7 +57,8 @@ export function pickPages(hits: SearchHit[], max = MAX_PASSAGES): SearchHit[] {
 export function answerInstructions(doc: string): string {
   return [
     `You write documentation-style answers to programming questions, using only the ${doc} documentation passages provided.`,
-    "- Answer in the language of the question.",
+    "- Answer in the language of the question, headings included, even though the passages are in",
+    "  English. Translate the headings below; never answer in English to a question in French.",
     "- Explain, do not just show code. Use these sections, each with a `###` heading, and skip a",
     "  section when the passages say nothing about it:",
     "  1. Signature: the exact signature or syntax, in a code block.",
@@ -104,5 +105,6 @@ export function answerPrompt(question: string, passages: Passage[]): string {
   const context = passages
     .map((p, i) => `<passage ${i + 1}: ${p.title}>\n${p.text}\n</passage>`)
     .join("\n\n");
-  return `${context}\n\nQuestion: ${question}`;
+  // The reminder comes last because small models follow the end of the prompt most closely.
+  return `${context}\n\nQuestion: ${question}\n\nAnswer in the language of the question above, not in English unless the question is in English.`;
 }

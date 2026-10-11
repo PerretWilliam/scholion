@@ -60,7 +60,7 @@ describe("prompts", () => {
       { title: "memcpy", text: "Copies bytes." },
     ]);
     expect(prompt).toBe(
-      "<passage 1: strcpy>\nCopies src.\n</passage>\n\n<passage 2: memcpy>\nCopies bytes.\n</passage>\n\nQuestion: copier une chaîne ?",
+      "<passage 1: strcpy>\nCopies src.\n</passage>\n\n<passage 2: memcpy>\nCopies bytes.\n</passage>\n\nQuestion: copier une chaîne ?\n\nAnswer in the language of the question above, not in English unless the question is in English.",
     );
   });
 });
