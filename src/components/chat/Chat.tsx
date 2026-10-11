@@ -31,11 +31,19 @@ interface ChatProps {
   /** Shown under the question field, on the left and on the right of the send button. */
   leftTools: ReactNode;
   rightTools: ReactNode;
+  /** Messages of a saved conversation; read once, so remount (`key`) to switch conversations. */
+  initialMessages: ChatMessage[];
+  /** Called with the whole conversation after each answer, also when it was stopped. */
+  onMessages: (messages: ChatMessage[]) => void;
 }
 
-export function Chat({ context, leftTools, rightTools }: ChatProps) {
+export function Chat({ context, leftTools, rightTools, initialMessages, onMessages }: ChatProps) {
   const transport = useMemo(() => createChatTransport(() => context.current), [context]);
-  const runtime = useChatRuntime<ChatMessage>({ transport });
+  const runtime = useChatRuntime<ChatMessage>({
+    transport,
+    messages: initialMessages,
+    onFinish: ({ messages }) => onMessages(messages),
+  });
   return (
     <AssistantRuntimeProvider runtime={runtime}>
       <ThreadPrimitive.Root className="flex h-full flex-col">
@@ -58,7 +66,7 @@ export function Chat({ context, leftTools, rightTools }: ChatProps) {
   );
 }
 
-function Composer({ leftTools, rightTools }: Omit<ChatProps, "context">) {
+function Composer({ leftTools, rightTools }: Pick<ChatProps, "leftTools" | "rightTools">) {
   return (
     <ComposerPrimitive.Root className="mx-auto w-full max-w-3xl px-6 pb-6">
       <div className="rounded-xl border bg-background shadow-sm focus-within:ring-2 focus-within:ring-ring/50">

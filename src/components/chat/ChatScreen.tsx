@@ -3,6 +3,7 @@ import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } fro
 import { Chat } from "@/components/chat/Chat";
 import { DocSearch } from "@/components/chat/DocSearch";
 import { DocActions } from "@/components/chat/InstallDocCard";
+import { Sidebar } from "@/components/chat/Sidebar";
 import { DocIcon } from "@/components/DocIcon";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,8 +14,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { ChatContext } from "@/lib/chat-transport";
+import type { ChatContext, ChatMessage } from "@/lib/chat-transport";
 import { docTitle } from "@/lib/format";
+import {
+  type Conversation,
+  loadConversations,
+  saveConversations,
+  titleOf,
+  upsert,
+} from "@/lib/history";
 import { type DocEntry, getDocs, getModels, type ModelStatus, setActiveModel } from "@/lib/ipc";
 
 /** Select value of the "open Settings" item in both pickers. */
@@ -62,6 +70,38 @@ export function ChatScreen({ visible, onOpenSettings }: Props) {
     }
   }
 
+  const [conversations, setConversations] = useState(loadConversations);
+  const conversationsRef = useRef(conversations);
+  const [currentId, setCurrentId] = useState<string>(() => crypto.randomUUID());
+
+  function persist(next: Conversation[]) {
+    conversationsRef.current = next;
+    setConversations(next);
+    try {
+      saveConversations(next);
+    } catch (e) {
+      setError(`Could not save the history: ${e}`);
+    }
+  }
+
+  /** `id` is fixed per mounted chat (it is the chat's `key`), so this never saves to the wrong one. */
+  function saveMessages(id: string, messages: ChatMessage[]) {
+    if (messages.length === 0) return;
+    persist(
+      upsert(conversationsRef.current, {
+        id,
+        title: titleOf(messages),
+        updatedAt: Date.now(),
+        messages,
+      }),
+    );
+  }
+
+  function deleteConversation(id: string) {
+    persist(conversationsRef.current.filter((c) => c.id !== id));
+    if (id === currentId) setCurrentId(crypto.randomUUID());
+  }
+
   const context = useRef<ChatContext>({ slug, model: model ?? null, selectDoc: setSlug });
   context.current = { slug, model: model ?? null, selectDoc: setSlug };
   const actions = useMemo(() => ({ reloadDocs, selectDoc: setSlug }), [reloadDocs]);
@@ -93,25 +133,43 @@ export function ChatScreen({ visible, onOpenSettings }: Props) {
       )}
       {model ? (
         <DocActions value={actions}>
-          <Chat
-            context={context}
-            leftTools={docPicker}
-            rightTools={
-              <Picker
-                label="Model"
-                value={model}
-                manageLabel="Other models…"
-                onChange={selectModel}
-                onManage={onOpenSettings}
-              >
-                {models.map((m) => (
-                  <SelectItem key={m.file} value={m.file}>
-                    {m.name}
-                  </SelectItem>
-                ))}
-              </Picker>
-            }
-          />
+          <div className="flex min-h-0 flex-1">
+            <Sidebar
+              conversations={conversations}
+              currentId={currentId}
+              onSelect={setCurrentId}
+              onNew={() => setCurrentId(crypto.randomUUID())}
+              onDelete={deleteConversation}
+              onClear={() => {
+                persist([]);
+                setCurrentId(crypto.randomUUID());
+              }}
+            />
+            <div className="min-w-0 flex-1">
+              <Chat
+                key={currentId}
+                context={context}
+                initialMessages={conversations.find((c) => c.id === currentId)?.messages ?? []}
+                onMessages={(messages) => saveMessages(currentId, messages)}
+                leftTools={docPicker}
+                rightTools={
+                  <Picker
+                    label="Model"
+                    value={model}
+                    manageLabel="Other models…"
+                    onChange={selectModel}
+                    onManage={onOpenSettings}
+                  >
+                    {models.map((m) => (
+                      <SelectItem key={m.file} value={m.file}>
+                        {m.name}
+                      </SelectItem>
+                    ))}
+                  </Picker>
+                }
+              />
+            </div>
+          </div>
         </DocActions>
       ) : (
         model === null && (
