@@ -66,7 +66,7 @@ A tour of the code is in [CLAUDE.md](CLAUDE.md) (layout and conventions, useful 
 ## Translations
 
 The interface is translated with one JSON file per language in
-[`src/locales/`](src/locales). `en.json` is the reference; the language picker in the header shows
+[`src/locales/`](src/locales). `en.json` is the reference; the language picker in Settings shows
 each language with the share of English messages it covers (`Français · 100%`).
 
 **Add a language** (no code change needed):

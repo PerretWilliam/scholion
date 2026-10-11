@@ -12,7 +12,7 @@ export function LanguagePicker() {
   const language = useLanguage();
   return (
     <Select value={language} onValueChange={setLanguage}>
-      <SelectTrigger size="sm" aria-label={t("app.language")} className="border-0 shadow-none">
+      <SelectTrigger size="sm" aria-label={t("app.language")} className="w-full">
         <SelectValue />
       </SelectTrigger>
       <SelectContent align="end">
