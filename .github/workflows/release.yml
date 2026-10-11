@@ -74,7 +74,7 @@ jobs:
 
       # Builds are unsigned: see docs/architecture.md, "Releases". The assets are added to the
       # release that release-please just created.
-      - uses: tauri-apps/tauri-action@v0
+      - uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
