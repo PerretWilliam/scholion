@@ -197,6 +197,18 @@ in the app, no model involved.
 The doc picker (left) and model picker (right) sit under the question field. Each ends with an
 item that opens Settings.
 
+## Translations (`src/lib/i18n.ts`, `src/locales/`)
+
+No i18n library: `import.meta.glob` loads every `src/locales/<code>.json`, `en.json` being the
+reference and the fallback for missing messages. `t(key, vars)` fills `{placeholders}`;
+`useLanguage()` re-renders a component when the language changes. The choice is kept in
+`localStorage` (first run: the closest of `navigator.languages`). The picker shows each language's
+name from `Intl.DisplayNames` and its coverage, rounded down so that 100% means complete. Tests
+check that locale files only use known keys and the same placeholders as English, and that every
+`t("key")` in the code exists and every key is used. Not translated: errors coming from Rust, model
+descriptions, and the prompts sent to the model (they stay English; the answer follows the
+question's language).
+
 ## Doc icons (`src/assets/doc-icons/`, `src/components/DocIcon.tsx`)
 
 DevDocs' own 32×32 icons (`public/icons/docs/<name>/16@2x.png` in `freeCodeCamp/devdocs` at

@@ -63,6 +63,35 @@ A tour of the code is in [CLAUDE.md](CLAUDE.md) (layout and conventions, useful 
 - Live tests against real services are `#[ignore]`d. After touching network code, run
   `cargo test --manifest-path src-tauri/Cargo.toml -- --ignored`.
 
+## Translations
+
+The interface is translated with one JSON file per language in
+[`src/locales/`](src/locales). `en.json` is the reference; the language picker in the header shows
+each language with the share of English messages it covers (`Français · 100%`).
+
+**Add a language** (no code change needed):
+
+1. Copy `src/locales/en.json` to `src/locales/<code>.json`, where `<code>` is a
+   [BCP 47](https://www.iana.org/assignments/language-subtag-registry) code: `it`, `pt-BR`,
+   `zh-TW`...
+2. Translate the values. Keep the keys and the `{placeholders}` as they are.
+3. Run `pnpm test`: it checks that your file only has known keys and the same placeholders as
+   English.
+
+The language name in the picker comes from the browser, and the percentage is computed from the
+file. A partial translation is welcome: missing messages fall back to English, and the picker shows
+the real coverage. Right-to-left languages need layout work first: open an issue to discuss it.
+
+**Add or change a message**: add the key to `en.json`, use it with `t("your.key", { name })` (and
+call `useLanguage()` in components so they re-render when the language changes), and translate it
+in the other files if you can. The test fails on a key that is used but missing, or defined but
+unused.
+
+The app's language only affects the interface. Answers follow the language of the question.
+
+The first translations were written with an AI assistant and have not all been reviewed by native
+speakers: corrections are very welcome, as small pull requests editing one file.
+
 ## Commits and releases
 
 Commits and PR titles follow [Conventional Commits](https://www.conventionalcommits.org/):

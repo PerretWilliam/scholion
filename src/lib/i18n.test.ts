@@ -63,7 +63,7 @@ describe("keys in the code", () => {
   walk(join(__dirname, ".."));
   const used = new Set(
     sources.flatMap((f) =>
-      [...readFileSync(f, "utf8").matchAll(/\bt\(\s*"([\w.]+)"/g)].map((m) => m[1]),
+      [...readFileSync(f, "utf8").matchAll(/\bt\(\s*"([\w.]+)"/g)].map((m) => m[1] as string),
     ),
   );
 
