@@ -22,7 +22,7 @@
     "security": {
       "csp": {
         "default-src": "'self'",
-        "connect-src": "'self' ipc: http://ipc.localhost http://127.0.0.1:*",
+        "connect-src": "'self' ipc: http://ipc.localhost http://127.0.0.1:* https://openrouter.ai https://api.openai.com",
         "img-src": "'self' data:",
         "style-src": "'self' 'unsafe-inline'"
       }

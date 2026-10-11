@@ -34,6 +34,16 @@ export interface Settings {
   auto_update_docs: boolean;
   /** File name of the model used for answers. */
   active_model: string | null;
+  cloud: Cloud | null;
+  /** Answer with `cloud` rather than the local model. */
+  use_cloud: boolean;
+}
+
+/** An OpenAI-compatible cloud provider; see `PROVIDERS` in `providers.ts`. */
+export interface Cloud {
+  provider: string;
+  api_key: string;
+  model: string;
 }
 
 /** Emitted by the backend after the launch-time manifest check. */

@@ -50,8 +50,8 @@ Run `pnpm check` before declaring work done.
 
 - **Keep it small.** No abstraction with a single implementation, no speculative config, no new
   dependency when a few lines or an installed one will do. Justify every new dependency in the PR.
-- **Network in Rust only.** The webview may only reach `llama-server` on `127.0.0.1` (enforced by
-  CSP). Downloads (manifest, docs, models) go through Rust.
+- **Network in Rust only.** The webview may only reach `llama-server` on `127.0.0.1` and the optional
+  cloud providers listed in the CSP (`src/lib/providers.ts`). Downloads (manifest, docs, models) go through Rust.
 - **Never re-download** DevDocs data on launch; manifest checks are limited to one per 24 h.
 - **Never let the model produce URLs.** Source links are built from the manifest and entry paths.
 - **Attribution** from DevDocs is HTML: sanitize before rendering.

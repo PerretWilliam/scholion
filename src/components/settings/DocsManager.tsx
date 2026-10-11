@@ -1,5 +1,5 @@
 import { listen } from "@tauri-apps/api/event";
-import { RefreshCw } from "lucide-react";
+import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { DocIcon } from "@/components/DocIcon";
 import { RemoveAllButton } from "@/components/settings/RemoveAllButton";
@@ -23,14 +23,15 @@ import {
   setSettings,
 } from "@/lib/ipc";
 
-/** Keeps the available list short; users narrow it with the search box. */
-const MAX_VISIBLE = 50;
+const PAGE_SIZE = 8;
 
 export function DocsManager() {
   const [overview, setOverview] = useState<DocsOverview | null>(null);
   const [settings, setLocalSettings] = useState<Settings | null>(null);
   const [progress, setProgress] = useState<Record<string, number>>({});
   const [query, setQuery] = useState("");
+  const [installedPage, setInstalledPage] = useState(0);
+  const [availablePage, setAvailablePage] = useState(0);
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const searchId = useId();
@@ -174,30 +175,37 @@ export function DocsManager() {
         </div>
         {overview?.installed.length ? (
           <ul className="divide-y rounded-md border">
-            {overview.installed.map(({ entry, update_available, newer_version }) => (
-              <DocRow key={entry.slug} doc={entry} progress={progress[entry.slug]}>
-                {newer_version && (
-                  <span className="text-muted-foreground text-xs">
-                    {entry.name} {newer_version} is available
-                  </span>
-                )}
-                {update_available && (
-                  <>
-                    <Badge variant="secondary">Update available</Badge>
-                    <Button size="sm" onClick={() => install(entry)}>
-                      Update
-                    </Button>
-                  </>
-                )}
-                <Button size="sm" variant="ghost" onClick={() => remove(entry)}>
-                  Remove
-                </Button>
-              </DocRow>
-            ))}
+            {page(overview.installed, installedPage).map(
+              ({ entry, update_available, newer_version }) => (
+                <DocRow key={entry.slug} doc={entry} progress={progress[entry.slug]}>
+                  {newer_version && (
+                    <span className="text-muted-foreground text-xs">
+                      {entry.name} {newer_version} is available
+                    </span>
+                  )}
+                  {update_available && (
+                    <>
+                      <Badge variant="secondary">Update available</Badge>
+                      <Button size="sm" onClick={() => install(entry)}>
+                        Update
+                      </Button>
+                    </>
+                  )}
+                  <Button size="sm" variant="ghost" onClick={() => remove(entry)}>
+                    Remove
+                  </Button>
+                </DocRow>
+              ),
+            )}
           </ul>
         ) : (
           <p className="text-muted-foreground text-sm">No docs installed yet.</p>
         )}
+        <Pager
+          page={installedPage}
+          total={overview?.installed.length ?? 0}
+          onChange={setInstalledPage}
+        />
       </div>
 
       <div className="space-y-2">
@@ -207,7 +215,10 @@ export function DocsManager() {
           type="search"
           placeholder="Search languages, e.g. python, js, rust"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setAvailablePage(0);
+          }}
         />
         {overview && overview.available.length === 0 ? (
           <p className="text-muted-foreground text-sm">
@@ -215,7 +226,7 @@ export function DocsManager() {
           </p>
         ) : (
           <ul className="divide-y rounded-md border">
-            {matches.slice(0, MAX_VISIBLE).map((doc) => (
+            {page(matches, availablePage).map((doc) => (
               <DocRow key={doc.slug} doc={doc} progress={progress[doc.slug]}>
                 <Button size="sm" variant="outline" onClick={() => install(doc)}>
                   Install
@@ -224,11 +235,7 @@ export function DocsManager() {
             ))}
           </ul>
         )}
-        {matches.length > MAX_VISIBLE && (
-          <p className="text-muted-foreground text-xs">
-            Showing {MAX_VISIBLE} of {matches.length}. Refine your search to see more.
-          </p>
-        )}
+        <Pager page={availablePage} total={matches.length} onChange={setAvailablePage} />
       </div>
     </section>
   );
@@ -257,5 +264,51 @@ function DocRow({ doc, progress, children }: DocRowProps) {
         <Progress value={progress} className="w-32" aria-label={`Installing ${title}`} />
       )}
     </li>
+  );
+}
+
+const lastPage = (total: number) => Math.max(Math.ceil(total / PAGE_SIZE) - 1, 0);
+
+/** Items of page `index`, clamped: removing the last doc of a page leaves it past the end. */
+const page = <T,>(items: T[], index: number) => {
+  const i = Math.min(index, lastPage(items.length));
+  return items.slice(i * PAGE_SIZE, (i + 1) * PAGE_SIZE);
+};
+
+interface PagerProps {
+  page: number;
+  total: number;
+  onChange: (page: number) => void;
+}
+
+/** Previous/next buttons under a list; nothing when everything fits on one page. */
+function Pager({ page, total, onChange }: PagerProps) {
+  const last = lastPage(total);
+  const current = Math.min(page, last);
+  if (last === 0) return null;
+  return (
+    <nav aria-label="Pagination" className="flex items-center justify-end gap-2 text-xs">
+      <span className="text-muted-foreground">
+        {current * PAGE_SIZE + 1}–{Math.min((current + 1) * PAGE_SIZE, total)} of {total}
+      </span>
+      <Button
+        size="icon-sm"
+        variant="outline"
+        aria-label="Previous page"
+        disabled={current === 0}
+        onClick={() => onChange(current - 1)}
+      >
+        <ChevronLeft />
+      </Button>
+      <Button
+        size="icon-sm"
+        variant="outline"
+        aria-label="Next page"
+        disabled={current >= last}
+        onClick={() => onChange(current + 1)}
+      >
+        <ChevronRight />
+      </Button>
+    </nav>
   );
 }

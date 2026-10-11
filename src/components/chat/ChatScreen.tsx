@@ -23,10 +23,22 @@ import {
   titleOf,
   upsert,
 } from "@/lib/history";
-import { type DocEntry, getDocs, getModels, type ModelStatus, setActiveModel } from "@/lib/ipc";
+import {
+  type Cloud,
+  type DocEntry,
+  getDocs,
+  getModels,
+  getSettings,
+  type ModelStatus,
+  setActiveModel,
+  setSettings,
+} from "@/lib/ipc";
+import { PROVIDERS, type ProviderId } from "@/lib/providers";
 
 /** Select value of the "open Settings" item in both pickers. */
 const MANAGE = "manage";
+/** Select value of the cloud provider in the model picker. */
+const CLOUD = "cloud";
 
 interface Props {
   visible: boolean;
@@ -43,10 +55,18 @@ export function ChatScreen({ visible, onOpenSettings }: Props) {
   const [models, setModels] = useState<ModelStatus[]>([]);
   /** Active model file; undefined until loaded. */
   const [model, setModel] = useState<string | null | undefined>(undefined);
+  /** Configured cloud provider, and whether it answers instead of the local model. */
+  const [cloudConfig, setCloudConfig] = useState<Cloud | null>(null);
+  const [useCloud, setUseCloud] = useState(false);
+  const cloud = useCloud ? cloudConfig : null;
   const [error, setError] = useState<string | null>(null);
 
   const reloadDocs = useCallback(async () => {
-    const [{ installed }, overview] = await Promise.all([getDocs(), getModels()]);
+    const [{ installed }, overview, settings] = await Promise.all([
+      getDocs(),
+      getModels(),
+      getSettings(),
+    ]);
     const entries = installed.map((d) => d.entry);
     setDocs(entries);
     setSlug((current) =>
@@ -54,6 +74,8 @@ export function ChatScreen({ visible, onOpenSettings }: Props) {
     );
     setModels(overview.models.filter((m) => m.downloaded));
     setModel(overview.active);
+    setCloudConfig(settings.cloud);
+    setUseCloud(settings.use_cloud);
   }, []);
 
   // Docs and models change in Settings: refresh whenever the screen shows again.
@@ -63,7 +85,17 @@ export function ChatScreen({ visible, onOpenSettings }: Props) {
 
   async function selectModel(file: string) {
     try {
+      // Read fresh settings: the active model is saved in them too.
+      if (file === CLOUD) {
+        const settings = await getSettings();
+        await setSettings({ ...settings, use_cloud: true });
+        setUseCloud(true);
+        return;
+      }
       await setActiveModel(file);
+      const settings = await getSettings();
+      if (settings.use_cloud) await setSettings({ ...settings, use_cloud: false });
+      setUseCloud(false);
       setModel(file);
     } catch (e) {
       setError(`Could not switch models: ${e}`);
@@ -129,16 +161,13 @@ export function ChatScreen({ visible, onOpenSettings }: Props) {
     if (id === currentId) open(crypto.randomUUID());
   }
 
-  function clearConversations() {
-    persist([]);
-    const id = crypto.randomUUID();
-    setOpened([id]);
-    setCurrentId(id);
-  }
-
-  const context = useRef<ChatContext>({ slug, model: model ?? null, selectDoc: setSlug });
-  context.current = { slug, model: model ?? null, selectDoc: setSlug };
+  const context = useRef<ChatContext>({ slug, model: model ?? null, cloud, selectDoc: setSlug });
+  context.current = { slug, model: model ?? null, cloud, selectDoc: setSlug };
   const actions = useMemo(() => ({ reloadDocs, selectDoc: setSlug }), [reloadDocs]);
+
+  const cloudOption = cloudConfig
+    ? `${PROVIDERS[cloudConfig.provider as ProviderId]?.name ?? cloudConfig.provider} · ${cloudConfig.model}`
+    : null;
 
   const docPicker = (
     <Picker
@@ -165,7 +194,7 @@ export function ChatScreen({ visible, onOpenSettings }: Props) {
           {error}
         </p>
       )}
-      {model ? (
+      {model || cloud ? (
         <DocActions value={actions}>
           <div className="flex min-h-0 flex-1">
             <Sidebar
@@ -174,7 +203,6 @@ export function ChatScreen({ visible, onOpenSettings }: Props) {
               onSelect={select}
               onNew={() => open(crypto.randomUUID())}
               onDelete={deleteConversation}
-              onClear={clearConversations}
             />
             <div className="min-w-0 flex-1">
               {conversations &&
@@ -189,7 +217,7 @@ export function ChatScreen({ visible, onOpenSettings }: Props) {
                       rightTools={
                         <Picker
                           label="Model"
-                          value={model}
+                          value={cloud ? CLOUD : (model ?? "")}
                           manageLabel="Other models…"
                           onChange={selectModel}
                           onManage={onOpenSettings}
@@ -199,6 +227,7 @@ export function ChatScreen({ visible, onOpenSettings }: Props) {
                               {m.name}
                             </SelectItem>
                           ))}
+                          {cloudOption && <SelectItem value={CLOUD}>{cloudOption}</SelectItem>}
                         </Picker>
                       }
                     />

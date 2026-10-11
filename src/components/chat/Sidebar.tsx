@@ -1,5 +1,4 @@
 import { Plus, X } from "lucide-react";
-import { RemoveAllButton } from "@/components/settings/RemoveAllButton";
 import { Button } from "@/components/ui/button";
 import type { Conversation } from "@/lib/history";
 import { cn } from "@/lib/utils";
@@ -11,18 +10,10 @@ interface SidebarProps {
   onSelect: (id: string) => void;
   onNew: () => void;
   onDelete: (id: string) => void;
-  onClear: () => void;
 }
 
 /** Past conversations, newest first, like in ChatGPT or Claude. Hidden on narrow windows. */
-export function Sidebar({
-  conversations,
-  currentId,
-  onSelect,
-  onNew,
-  onDelete,
-  onClear,
-}: SidebarProps) {
+export function Sidebar({ conversations, currentId, onSelect, onNew, onDelete }: SidebarProps) {
   const isNew = !conversations.some((c) => c.id === currentId);
   return (
     <aside
@@ -64,13 +55,6 @@ export function Sidebar({
           </div>
         ))}
       </nav>
-      {conversations.length > 0 && (
-        <RemoveAllButton
-          what="all conversations"
-          size={`${conversations.length}`}
-          onConfirm={onClear}
-        />
-      )}
     </aside>
   );
 }

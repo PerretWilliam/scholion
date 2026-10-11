@@ -11,6 +11,7 @@ import {
 } from "ai";
 import { docTitle } from "@/lib/format";
 import {
+  type Cloud,
   type DocEntry,
   type DocIntent,
   detectDoc,
@@ -31,6 +32,7 @@ import {
   parseKeywords,
   pickPages,
 } from "@/lib/prompts";
+import { PROVIDERS, type ProviderId } from "@/lib/providers";
 
 /** Shown under an answer: built from the manifest and entry paths, never by the model. */
 export interface Sources {
@@ -64,6 +66,8 @@ export interface ChatContext {
   slug: string;
   /** Active model file, null if none is downloaded. */
   model: string | null;
+  /** Cloud provider to answer with instead of the local model, null to stay local. */
+  cloud: Cloud | null;
   /** Called when the question names another installed doc. */
   selectDoc: (slug: string) => void;
 }
@@ -136,17 +140,22 @@ async function answer(
     writeText(writer, `Now using ${docTitle(doc)}. Ask your question.`);
     return;
   }
-  if (!context.model) {
+  if (!context.model && !context.cloud) {
     writeText(writer, "No model is installed. Download one in Settings, or use Search mode.");
     return;
   }
 
-  status("Loading the model…");
-  const port = await startLlm(context.model);
-  const model = createOpenAICompatible({
-    name: "llama-server",
-    baseURL: `http://127.0.0.1:${port}/v1`,
-  }).chatModel("local");
+  status(context.cloud ? "Contacting the provider…" : "Loading the model…");
+  const model = context.cloud
+    ? createOpenAICompatible({
+        name: context.cloud.provider,
+        baseURL: PROVIDERS[context.cloud.provider as ProviderId].baseURL,
+        apiKey: context.cloud.api_key,
+      }).chatModel(context.cloud.model)
+    : createOpenAICompatible({
+        name: "llama-server",
+        baseURL: `http://127.0.0.1:${await startLlm(context.model as string)}/v1`,
+      }).chatModel("local");
 
   status("Searching the docs…");
   const title = docTitle(doc);
