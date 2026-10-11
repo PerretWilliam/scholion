@@ -2,7 +2,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { completeness, LANGUAGES, type Messages, translate } from "@/lib/i18n";
+import { completeness, flagOf, LANGUAGES, type Messages, translate } from "@/lib/i18n";
 import en from "@/locales/en.json";
 
 const localesDir = join(__dirname, "../locales");
@@ -15,6 +15,15 @@ describe("translate", () => {
     );
     expect(translate({}, "chat.sources", { doc: "Go" })).toBe("Sources (Go):");
     expect(translate({ "chat.send": "  " }, "chat.send")).toBe("Send");
+  });
+});
+
+describe("flagOf", () => {
+  it("uses the region of the code, else the usual country, else a globe", () => {
+    expect(flagOf("fr")).toBe("🇫🇷");
+    expect(flagOf("pt-BR")).toBe("🇧🇷");
+    expect(flagOf("zh-CN")).toBe("🇨🇳");
+    expect(flagOf("xx")).toBe("🌐");
   });
 });
 

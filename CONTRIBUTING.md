@@ -78,8 +78,9 @@ each language with the share of English messages it covers (`Français · 100%`)
 3. Run `pnpm test`: it checks that your file only has known keys and the same placeholders as
    English.
 
-The language name in the picker comes from the browser, and the percentage is computed from the
-file. A partial translation is welcome: missing messages fall back to English, and the picker shows
+The language name in the picker comes from the browser, the percentage is computed from the
+file, and the flag comes from the region in the code (`pt-BR` shows 🇧🇷) or, for a bare code, from
+`DEFAULT_REGION` in `src/lib/i18n.ts` (add a line there; without one the picker shows 🌐). A partial translation is welcome: missing messages fall back to English, and the picker shows
 the real coverage. Right-to-left languages need layout work first: open an issue to discuss it.
 
 **Add or change a message**: add the key to `en.json`, use it with `t("your.key", { name })` (and
