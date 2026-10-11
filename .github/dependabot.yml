@@ -1,3 +1,4 @@
+# One grouped pull request per ecosystem and week: the weekly batch, majors included.
 version: 2
 updates:
   - package-ecosystem: npm
@@ -5,8 +6,8 @@ updates:
     schedule:
       interval: weekly
     groups:
-      minor-and-patch:
-        update-types: [minor, patch]
+      all:
+        patterns: ["*"]
     commit-message:
       prefix: chore
   - package-ecosystem: cargo
@@ -14,8 +15,8 @@ updates:
     schedule:
       interval: weekly
     groups:
-      minor-and-patch:
-        update-types: [minor, patch]
+      all:
+        patterns: ["*"]
     commit-message:
       prefix: chore
   - package-ecosystem: github-actions

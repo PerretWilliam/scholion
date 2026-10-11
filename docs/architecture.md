@@ -218,7 +218,7 @@ the chat, which can search docs without a model.
 - Versions are automatic (`.github/workflows/release.yml`, `release-please-config.json`).
   [release-please](https://github.com/googleapis/release-please) reads the Conventional Commits on
   `main` and keeps a release PR open that bumps `package.json`, `tauri.conf.json`, `Cargo.toml`
-  and `Cargo.lock` together and writes `CHANGELOG.md`. Merging it creates the tag and the GitHub
+  together (`Cargo.lock` follows at the next cargo run) and writes `CHANGELOG.md`. Merging it creates the tag and the GitHub
   release, then the build jobs run `tauri-apps/tauri-action` and attach the installers: macOS
   arm64 and x64 (`.dmg`, `.app.tar.gz`), Windows x64 (`.msi`, NSIS `.exe`), Linux x64
   (`.AppImage`, `.deb`, `.rpm`). Each job runs `pnpm fetch:llama <target>` first, so every
