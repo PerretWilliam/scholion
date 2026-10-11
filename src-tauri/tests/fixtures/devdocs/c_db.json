@@ -1,0 +1,4 @@
+{
+  "string/byte/strcpy": "<h1>strcpy, strcpy_s</h1><pre data-language=\"c\">char* strcpy( char* dest, const char* src );</pre><p>Copies the null-terminated byte string pointed to by src to dest.</p>",
+  "string/byte/memcpy": "<h1>memcpy</h1><pre data-language=\"c\">void* memcpy( void* dest, const void* src, size_t count );</pre><p>Copies count bytes from src to dest.</p>"
+}

@@ -31,6 +31,9 @@ pnpm test             # Vitest
 pnpm test:rust        # cargo test
 ```
 
+Live tests against real services are `#[ignore]`d. Run them with
+`cargo test --manifest-path src-tauri/Cargo.toml -- --ignored` after touching network code.
+
 Run `pnpm check` before declaring work done.
 
 ## Layout

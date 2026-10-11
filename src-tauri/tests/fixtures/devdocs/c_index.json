@@ -1,0 +1,8 @@
+{
+  "entries": [
+    { "name": "strcpy", "path": "string/byte/strcpy", "type": "Strings" },
+    { "name": "strcpy_s", "path": "string/byte/strcpy", "type": "Strings" },
+    { "name": "memcpy", "path": "string/byte/memcpy", "type": "Strings" }
+  ],
+  "types": [{ "name": "Strings", "count": 3, "slug": "strings" }]
+}

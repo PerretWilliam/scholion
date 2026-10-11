@@ -20,6 +20,10 @@ tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+thiserror = "2"
+rusqlite = { version = "0.40", features = ["bundled"] }
+reqwest = { version = "0.13", features = ["json", "brotli"] }
+tokio = { version = "1", features = ["fs", "io-util"] }
 
 # See https://v2.tauri.app/concept/size/
 [profile.release]
@@ -28,3 +32,6 @@ lto = true
 opt-level = 3
 panic = "abort"
 strip = true
+
+[dev-dependencies]
+tempfile = "3"

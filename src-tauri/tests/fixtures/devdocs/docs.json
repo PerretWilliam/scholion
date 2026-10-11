@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Python",
+    "slug": "python~3.15",
+    "type": "python",
+    "links": { "home": "https://www.python.org/", "code": "https://github.com/python/cpython" },
+    "version": "3.15",
+    "release": "3.15.0",
+    "mtime": 1791566664,
+    "db_size": 22131109,
+    "attribution": "&copy; 2001 Python Software Foundation<br>\n      Licensed under the PSF License.",
+    "alias": "py"
+  },
+  {
+    "name": "Python",
+    "slug": "python~3.14",
+    "type": "python",
+    "links": { "home": "https://www.python.org/", "code": "https://github.com/python/cpython" },
+    "version": "3.14",
+    "release": "3.14.8",
+    "mtime": 1791121287,
+    "db_size": 20789756,
+    "attribution": "&copy; 2001 Python Software Foundation<br>\n      Licensed under the PSF License.",
+    "alias": "py"
+  },
+  {
+    "name": "C",
+    "slug": "c",
+    "type": "cppref",
+    "mtime": 1786782280,
+    "db_size": 5128537,
+    "attribution": "&copy; cppreference.com<br>\n      Licensed under the Creative Commons Attribution-ShareAlike Unported License v3.0.",
+    "alias": null
+  },
+  {
+    "name": "Angular",
+    "slug": "angular",
+    "type": null,
+    "links": { "home": "https://angular.dev/", "code": "https://github.com/angular/angular" },
+    "version": "",
+    "release": "22.0.0",
+    "mtime": 1780544785,
+    "db_size": 8825224,
+    "attribution": "Super-powered by Google &copy;2010&ndash;2025.",
+    "alias": "ng"
+  }
+]

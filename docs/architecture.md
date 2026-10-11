@@ -34,7 +34,8 @@ Everything marked **Verified** was checked against the live services on 2026-10-
   header with the one stored. Same location means the manifest is unchanged. Only follow the
   redirect when it changed. This replaces ETag / If-Modified-Since.
 - ~840 entries. Fields: `name`, `slug`, `type`, `version`, `release`, `mtime`, `db_size`,
-  `attribution`, `links` (`home`, `code`), `alias` (may be `null`).
+  `attribution`, `links` (`home`, `code`), `alias`. Any string field may be `null` in practice
+  (`alias` often, `type` at least once), so we parse `null` as empty.
 - Versions are separate entries sharing `name`, with slugs like `python~3.15`, `python~3.14`.
 - `attribution` is **HTML** (e.g. `&copy; 2001 Python Software Foundation<br>Licensed under the PSF
   License.`). Render it sanitized; never inject it raw.
