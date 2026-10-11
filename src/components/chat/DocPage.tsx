@@ -154,7 +154,7 @@ export function DocPage({
       {/* biome-ignore lint/a11y/useKeyWithClickEvents: delegates clicks on links, which are keyboard-activatable themselves. */}
       {/* biome-ignore lint/a11y/noStaticElementInteractions: same as above. */}
       <div
-        className="prose prose-sm dark:prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none"
+        className="prose prose-sm dark:prose-invert prose-pre:border prose-pre:bg-muted prose-pre:text-foreground prose-code:before:content-none prose-code:after:content-none max-w-none"
         ref={body}
         onClick={handleClick}
         // biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized with DOMPurify above.
