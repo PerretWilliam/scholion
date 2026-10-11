@@ -17,6 +17,9 @@ updates:
     groups:
       all:
         patterns: ["*"]
+    ignore:
+      # Tied to the version htmd uses: bump it together with htmd.
+      - dependency-name: markup5ever_rcdom
     commit-message:
       prefix: chore
   - package-ecosystem: github-actions
