@@ -48,10 +48,16 @@
     ],
     "linux": {
       "deb": {
-        "depends": ["libssl3", "libvulkan1"]
+        "depends": [
+          "libssl3",
+          "libvulkan1"
+        ]
       },
       "rpm": {
-        "depends": ["openssl-libs", "vulkan-loader"]
+        "depends": [
+          "openssl-libs",
+          "vulkan-loader"
+        ]
       }
     }
   }
