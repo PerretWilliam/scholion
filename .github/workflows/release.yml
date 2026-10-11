@@ -1,17 +1,33 @@
 name: Release
 
-# Push a tag like v0.1.0 (matching the version in tauri.conf.json) to build installers for every
-# platform into a draft GitHub release. Review the draft, then publish it by hand.
+# Conventional Commits on main drive the version. release-please keeps a "release PR" open that
+# bumps package.json, tauri.conf.json and Cargo.toml and writes CHANGELOG.md. Merging it tags the
+# release, then the installers for every platform are built and attached to it.
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      created: ${{ steps.rp.outputs.release_created }}
+      tag: ${{ steps.rp.outputs.tag_name }}
+    steps:
+      - id: rp
+        uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
   build:
     name: Build (${{ matrix.llama }})
+    needs: release-please
+    if: needs.release-please.outputs.created == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -31,6 +47,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.release-please.outputs.tag }}
 
       - name: Install Linux system dependencies
         if: runner.os == 'Linux'
@@ -54,13 +72,11 @@ jobs:
         with:
           workspaces: src-tauri
 
-      # Builds are unsigned: see docs/architecture.md, "Releases".
+      # Builds are unsigned: see docs/architecture.md, "Releases". The assets are added to the
+      # release that release-please just created.
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: Scholion ${{ github.ref_name }}
-          releaseBody: See the assets below to download and install Scholion.
-          releaseDraft: true
+          tagName: ${{ needs.release-please.outputs.tag }}
           args: ${{ matrix.args }}

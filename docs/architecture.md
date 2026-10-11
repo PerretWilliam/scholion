@@ -215,11 +215,19 @@ the chat, which can search docs without a model.
 
 ## Releases (`.github/workflows/release.yml`)
 
-- Pushing a `v*` tag builds installers with `tauri-apps/tauri-action` into a **draft** GitHub
-  release: macOS arm64 and x64 (`.dmg`, `.app.tar.gz`), Windows x64 (`.msi`, NSIS `.exe`), Linux
-  x64 (`.AppImage`, `.deb`, `.rpm`). Each job runs `pnpm fetch:llama <target>` first, so every
-  installer bundles the `llama-server` build for its own platform. Keep the tag and the version in
-  `tauri.conf.json`, `Cargo.toml` and `package.json` equal.
+- Versions are automatic (`.github/workflows/release.yml`, `release-please-config.json`).
+  [release-please](https://github.com/googleapis/release-please) reads the Conventional Commits on
+  `main` and keeps a release PR open that bumps `package.json`, `tauri.conf.json`, `Cargo.toml`
+  and `Cargo.lock` together and writes `CHANGELOG.md`. Merging it creates the tag and the GitHub
+  release, then the build jobs run `tauri-apps/tauri-action` and attach the installers: macOS
+  arm64 and x64 (`.dmg`, `.app.tar.gz`), Windows x64 (`.msi`, NSIS `.exe`), Linux x64
+  (`.AppImage`, `.deb`, `.rpm`). Each job runs `pnpm fetch:llama <target>` first, so every
+  installer bundles the `llama-server` build for its own platform. Never bump versions by hand.
+- Pull requests are squash-merged; `pr-title.yml` enforces a Conventional Commits title, since it
+  becomes the commit message release-please reads.
+- Pull requests opened by `GITHUB_TOKEN` (the release PR) do not trigger other workflows. To run
+  CI on the release PR, give release-please a personal access token in a `RELEASE_PLEASE_TOKEN`
+  secret and pass it as `token:` to the action.
 - `THIRD_PARTY_NOTICES.md` is bundled as a resource: it carries the llama.cpp license, which the
   Windows archive does not include.
 - The `.deb` and `.rpm` depend on OpenSSL 3 and the Vulkan loader, which the Linux `llama-server`
