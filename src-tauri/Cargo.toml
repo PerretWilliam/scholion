@@ -1,6 +1,6 @@
 [package]
 name = "scholion"
-version = "0.1.0"
+version = "0.2.0"
 description = "Offline documentation assistant powered by a local language model"
 authors = ["William Perret"]
 license = "MIT"
