@@ -1,7 +1,7 @@
 //! Model catalog and downloads. Pins (sizes, sha256) are documented in docs/architecture.md.
 
 use std::fs::{self, File};
-use std::io;
+use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
 
@@ -107,8 +107,20 @@ pub async fn download(
 
 fn sha256_file(path: &Path) -> Result<String> {
     let mut hasher = Sha256::new();
-    io::copy(&mut File::open(path)?, &mut hasher)?;
-    Ok(format!("{:x}", hasher.finalize()))
+    let mut file = File::open(path)?;
+    let mut buf = vec![0; 1 << 20];
+    loop {
+        let n = file.read(&mut buf)?;
+        if n == 0 {
+            break;
+        }
+        hasher.update(&buf[..n]);
+    }
+    Ok(hasher
+        .finalize()
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect())
 }
 
 #[cfg(test)]
