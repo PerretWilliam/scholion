@@ -11,6 +11,8 @@ export default defineConfig({
   resolve: {
     alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
   },
+  // Loaded from disk by the app, not over a network: one big chunk costs nothing.
+  build: { chunkSizeWarningLimit: 4000 },
   // Keep Rust errors visible in the terminal.
   clearScreen: false,
   server: {

@@ -183,6 +183,33 @@ Qwen's suggested `presence_penalty 1.5` made answers loop, so it is not set.
 
 Without a model, the chat screen offers only "Search only".
 
+## First launch (`src/components/Welcome.tsx`)
+
+Shown when no model is downloaded and no doc is installed. It offers the recommended model and
+the newest version of a few popular docs (Python, JavaScript, TypeScript, Rust, Go, HTML, CSS),
+each with its size, next to the free space of the disk holding `app_data_dir` (`free_disk_space`,
+via `fs4`). A download that does not fit is disabled. Everything is optional: "Skip for now" opens
+the chat, which can search docs without a model.
+
+## Releases (`.github/workflows/release.yml`)
+
+- Pushing a `v*` tag builds installers with `tauri-apps/tauri-action` into a **draft** GitHub
+  release: macOS arm64 and x64 (`.dmg`, `.app.tar.gz`), Windows x64 (`.msi`, NSIS `.exe`), Linux
+  x64 (`.AppImage`, `.deb`, `.rpm`). Each job runs `pnpm fetch:llama <target>` first, so every
+  installer bundles the `llama-server` build for its own platform. Keep the tag and the version in
+  `tauri.conf.json`, `Cargo.toml` and `package.json` equal.
+- `THIRD_PARTY_NOTICES.md` is bundled as a resource: it carries the llama.cpp license, which the
+  Windows archive does not include.
+- The `.deb` and `.rpm` depend on OpenSSL 3 and the Vulkan loader, which the Linux `llama-server`
+  links.
+- **Builds are unsigned.** macOS shows a Gatekeeper warning (right-click → Open, or
+  `xattr -dr com.apple.quarantine /Applications/ai-doc.app`), Windows a SmartScreen warning.
+  To sign, add the secrets Tauri reads (`APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`,
+  `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID` for macOS signing and
+  notarization; a certificate in `bundle.windows` for Windows) and pass them to the
+  `tauri-action` step. See https://v2.tauri.app/distribute/sign/.
+- No auto-updater: users download new versions from the releases page.
+
 ## Storage layout (`app_data_dir`)
 
 | Path | Content |

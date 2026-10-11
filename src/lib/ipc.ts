@@ -125,6 +125,9 @@ export const removeModel = (file: string) => invoke<void>("remove_model", { file
 
 export const setActiveModel = (file: string) => invoke<void>("set_active_model", { file });
 
+/** Bytes free on the disk holding docs and models. */
+export const freeDiskSpace = () => invoke<number>("free_disk_space");
+
 export const getSettings = () => invoke<Settings>("get_settings");
 
 export const setSettings = (settings: Settings) => invoke<void>("set_settings", { settings });

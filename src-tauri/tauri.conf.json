@@ -31,8 +31,13 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "category": "DeveloperTool",
+    "shortDescription": "Offline documentation assistant powered by a local language model",
+    "copyright": "Copyright © 2026 William Perret",
+    "license": "MIT",
     "resources": {
-      "resources/llama/": "llama/"
+      "resources/llama/": "llama/",
+      "../THIRD_PARTY_NOTICES.md": "THIRD_PARTY_NOTICES.md"
     },
     "icon": [
       "icons/32x32.png",
@@ -40,6 +45,14 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "linux": {
+      "deb": {
+        "depends": ["libssl3", "libvulkan1"]
+      },
+      "rpm": {
+        "depends": ["openssl-libs", "vulkan-loader"]
+      }
+    }
   }
 }

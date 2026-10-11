@@ -143,6 +143,12 @@ pub fn set_settings(state: State<'_, AppState>, settings: Settings) -> Result<()
     settings::save(&state.data_dir, &settings)
 }
 
+/// Bytes free for this user on the disk holding the app data (docs and models).
+#[tauri::command]
+pub fn free_disk_space(state: State<'_, AppState>) -> Result<u64> {
+    Ok(fs4::available_space(&state.data_dir)?)
+}
+
 /// Returns the port of a `llama-server` running `model` (a file in the models directory),
 /// starting it, or restarting it with another model, when needed.
 #[tauri::command]

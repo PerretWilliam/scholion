@@ -1,13 +1,27 @@
 import { MessageSquare, Settings } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChatScreen } from "@/components/chat/ChatScreen";
 import { SettingsScreen } from "@/components/settings/SettingsScreen";
 import { Button } from "@/components/ui/button";
+import { Welcome } from "@/components/Welcome";
+import { getDocs, getModels } from "@/lib/ipc";
 
-type Screen = "chat" | "settings";
+type Screen = "welcome" | "chat" | "settings";
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>("chat");
+
+  // First launch, or everything was removed: offer a model and docs.
+  useEffect(() => {
+    Promise.all([getModels(), getDocs()])
+      .then(([models, docs]) => {
+        if (!models.models.some((m) => m.downloaded) && docs.installed.length === 0) {
+          setScreen("welcome");
+        }
+      })
+      // The chat screen loads the same data and reports the error.
+      .catch(() => {});
+  }, []);
 
   return (
     <div className="flex h-screen flex-col">
@@ -34,6 +48,11 @@ export default function App() {
       <main className="min-h-0 flex-1" hidden={screen !== "chat"}>
         <ChatScreen visible={screen === "chat"} />
       </main>
+      {screen === "welcome" && (
+        <main className="min-h-0 flex-1 overflow-auto">
+          <Welcome onDone={() => setScreen("chat")} />
+        </main>
+      )}
       {screen === "settings" && (
         <main className="min-h-0 flex-1 overflow-auto">
           <SettingsScreen />

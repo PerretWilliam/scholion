@@ -24,6 +24,8 @@ pub fn run() {
         .setup(|app| {
             let http = reqwest::Client::builder().user_agent(USER_AGENT).build()?;
             let data_dir = app.path().app_data_dir()?;
+            // Exists before anything is downloaded, so its disk can be measured.
+            std::fs::create_dir_all(&data_dir)?;
             let llama_dir = app.path().resource_dir()?.join("llama");
             app.manage(AppState {
                 http,
@@ -47,6 +49,7 @@ pub fn run() {
             commands::detect_doc,
             commands::get_settings,
             commands::set_settings,
+            commands::free_disk_space,
             commands::start_llm,
             commands::get_models,
             commands::download_model,
