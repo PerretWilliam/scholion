@@ -1,0 +1,30 @@
+[package]
+name = "ai-doc"
+version = "0.1.0"
+description = "Offline documentation assistant powered by a local language model"
+authors = ["William Perret"]
+license = "MIT"
+edition = "2024"
+
+[lib]
+# The `_lib` suffix avoids a name clash between the lib and bin targets on Windows.
+# See https://github.com/rust-lang/cargo/issues/8519
+name = "ai_doc_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# See https://v2.tauri.app/concept/size/
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true
