@@ -6,7 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!src-tauri/target", "!src-tauri/gen", "!dist", "!PROJECT.md"]
+    "includes": ["**", "!src-tauri/target", "!src-tauri/gen", "!dist"]
   },
   "formatter": {
     "indentStyle": "space",
