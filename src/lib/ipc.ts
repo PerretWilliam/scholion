@@ -32,6 +32,8 @@ export interface DocsOverview {
 
 export interface Settings {
   auto_update_docs: boolean;
+  /** File name of the model used for answers. */
+  active_model: string | null;
 }
 
 /** Emitted by the backend after the launch-time manifest check. */
@@ -73,6 +75,41 @@ export const getPage = (slug: string, path: string) => invoke<Page>("get_page", 
 
 /** Port of a llama-server running `model` (a file name in the models directory). */
 export const startLlm = (model: string) => invoke<number>("start_llm", { model });
+
+export interface ModelStatus {
+  /** File name in the models directory; also the model id. */
+  file: string;
+  name: string;
+  description: string;
+  repo: string;
+  size: number;
+  sha256: string;
+  recommended: boolean;
+  downloaded: boolean;
+  /** Bytes of an unfinished download that can resume, 0 if none. */
+  partial_bytes: number;
+}
+
+export interface ModelsOverview {
+  models: ModelStatus[];
+  /** File of the active model, null if none is downloaded. */
+  active: string | null;
+}
+
+export const getModels = () => invoke<ModelsOverview>("get_models");
+
+export function downloadModel(file: string, onProgress: (percent: number) => void) {
+  const channel = new Channel<number>();
+  channel.onmessage = onProgress;
+  return invoke<void>("download_model", { file, onProgress: channel });
+}
+
+export const cancelModelDownload = (file: string) =>
+  invoke<void>("cancel_model_download", { file });
+
+export const removeModel = (file: string) => invoke<void>("remove_model", { file });
+
+export const setActiveModel = (file: string) => invoke<void>("set_active_model", { file });
 
 export const getSettings = () => invoke<Settings>("get_settings");
 

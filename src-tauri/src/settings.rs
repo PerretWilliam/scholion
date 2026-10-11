@@ -10,6 +10,8 @@ use crate::storage;
 pub struct Settings {
     /// Install doc updates automatically after the background manifest check.
     pub auto_update_docs: bool,
+    /// File name of the model used for answers.
+    pub active_model: Option<String>,
 }
 
 pub fn load(data_dir: &Path) -> Result<Settings> {

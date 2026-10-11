@@ -3,10 +3,11 @@ mod docs;
 mod download;
 mod error;
 mod llm;
+mod models;
 mod settings;
 mod storage;
 
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::sync::Mutex;
 
 use tauri::{AppHandle, Emitter, Manager, RunEvent};
@@ -27,7 +28,7 @@ pub fn run() {
             app.manage(AppState {
                 http,
                 data_dir,
-                installing: Mutex::new(HashSet::new()),
+                downloads: Mutex::new(HashMap::new()),
                 llama_dir,
                 llm: Mutex::new(None),
                 llm_start: tokio::sync::Mutex::new(()),
@@ -45,6 +46,11 @@ pub fn run() {
             commands::get_settings,
             commands::set_settings,
             commands::start_llm,
+            commands::get_models,
+            commands::download_model,
+            commands::cancel_model_download,
+            commands::remove_model,
+            commands::set_active_model,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

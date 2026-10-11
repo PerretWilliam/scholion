@@ -112,9 +112,16 @@ All Apache-2.0, not gated, GGUF from Hugging Face. The sha256 is the LFS `oid`.
 | Default (fast) | `unsloth/Qwen3.5-4B-GGUF` / `Qwen3.5-4B-Q4_K_M.gguf` | 2.74 GB | `00fe7986ff5f6b463e62455821146049db6f9313603938a70800d1fb69ef11a4` |
 | Accurate | `unsloth/Qwen3.5-9B-GGUF` / `Qwen3.5-9B-Q4_K_M.gguf` | 5.68 GB | `03b74727a860a56338e042c4420bb3f04b2fec5734175f4cb9fa853daf52b7e8` |
 | Alternative | `google/gemma-4-E4B-it-qat-q4_0-gguf` / `gemma-4-E4B_q4_0-it.gguf` | 5.15 GB | `676c35070db6dbe52f93e9c864ee0fba4eddea94b9c875d9cb10daff453fbaee` |
+| Tiny (low-end machines, dev and tests) | `unsloth/Qwen3.5-0.8B-GGUF` / `Qwen3.5-0.8B-Q4_K_M.gguf` | 0.53 GB | `bd258782e35f7f458f8aced1adc053e6e92e89bc735ba3be89d38a06121dc517` |
 
-Download URL pattern: `https://huggingface.co/<repo>/resolve/main/<file>`.
-Dev and test model: `unsloth/Qwen3.5-0.8B-GGUF` / `Qwen3.5-0.8B-Q4_K_M.gguf` (0.53 GB).
+- The catalog is hard-coded in `src-tauri/src/models.rs` (exact byte sizes from `x-linked-size`).
+- Download URL pattern: `https://huggingface.co/<repo>/resolve/main/<file>`. It answers 302 to a
+  CDN that honors `Range` (verified), and `x-linked-etag` carries the sha256.
+- Downloads go to `tmp/<file>.part`. Cancelling or quitting keeps the part; the next download
+  resumes with `Range: bytes=<len>-`. Once complete, the sha256 is checked (a mismatch deletes the
+  part) and the file is renamed into `models/`.
+- The first model downloaded becomes active. Removing the model `llama-server` is running stops
+  the server first (Windows cannot delete a file in use).
 
 ## Frontend libraries (Verified versions)
 
@@ -147,9 +154,9 @@ clicks are intercepted: same-doc links open in the app, others in the system bro
 
 | Path | Content |
 |---|---|
-| `settings.json` | Active model, selected doc per language, auto-update flag, last manifest check |
+| `settings.json` | Active model, doc auto-update flag |
 | `manifest.json` | Cached DevDocs manifest + stored redirect `Location` |
 | `docs/<slug>.sqlite` | `meta` (manifest entry as JSON), `entries`, `pages` (HTML), `pages_fts` (FTS5) |
 | `models/<file>.gguf` | Downloaded models |
 | `llama-server.log` | Output of the last `llama-server` run |
-| `tmp/` | In-progress downloads and installs; swapped in atomically on success |
+| `tmp/` | In-progress doc installs and model downloads (`<file>.part`, kept to resume) |

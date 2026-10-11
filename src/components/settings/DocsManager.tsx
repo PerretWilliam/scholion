@@ -89,10 +89,10 @@ export function DocsManager() {
   }
 
   async function toggleAutoUpdate(enabled: boolean) {
-    const next = { ...settings, auto_update_docs: enabled };
-    setLocalSettings(next);
+    setLocalSettings((s) => s && { ...s, auto_update_docs: enabled });
     try {
-      await setSettings(next);
+      // Read fresh settings: the model manager may have changed the active model.
+      await setSettings({ ...(await getSettings()), auto_update_docs: enabled });
     } catch (e) {
       setError(`Could not save settings: ${e}`);
     }

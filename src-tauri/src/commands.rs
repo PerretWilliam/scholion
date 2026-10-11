@@ -1,8 +1,9 @@
 //! Every `#[tauri::command]` exposed to the frontend. Keep in sync with `src/lib/ipc.ts`.
 
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 
 use serde::Serialize;
 use tauri::State;
@@ -13,14 +14,16 @@ use crate::docs::search::{self, Page, SearchHit};
 use crate::docs::{InstalledDoc, install, installed_status};
 use crate::error::{AppError, Result};
 use crate::llm::{self, LlmServer};
+use crate::models::{self, CatalogModel};
 use crate::settings::{self, Settings};
 use crate::storage;
 
 pub struct AppState {
     pub http: reqwest::Client,
     pub data_dir: PathBuf,
-    /// Slugs being installed, so a doc is never installed twice at the same time.
-    pub installing: Mutex<HashSet<String>>,
+    /// Doc slugs and model files being downloaded, with their cancel flag, so nothing is
+    /// downloaded twice at the same time.
+    pub downloads: Mutex<HashMap<String, Arc<AtomicBool>>>,
     /// Folder holding the bundled `llama-server` and its libraries.
     pub llama_dir: PathBuf,
     /// At most one model is loaded at a time. Never held across an await, so the exit handler
@@ -160,6 +163,123 @@ pub async fn start_llm(state: State<'_, AppState>, model: String) -> Result<u16>
     ready.map(|()| port)
 }
 
+#[derive(Serialize)]
+pub struct ModelStatus {
+    #[serde(flatten)]
+    pub model: &'static CatalogModel,
+    pub downloaded: bool,
+    /// Bytes of an unfinished download that can resume (0 = none).
+    pub partial_bytes: u64,
+}
+
+#[derive(Serialize)]
+pub struct ModelsOverview {
+    pub models: Vec<ModelStatus>,
+    /// File of the model used for answers, if it is downloaded.
+    pub active: Option<String>,
+}
+
+#[tauri::command]
+pub fn get_models(state: State<'_, AppState>) -> Result<ModelsOverview> {
+    let models: Vec<ModelStatus> = models::CATALOG
+        .iter()
+        .map(|model| ModelStatus {
+            model,
+            downloaded: models::model_path(&state.data_dir, model).is_file(),
+            partial_bytes: std::fs::metadata(models::part_path(&state.data_dir, model))
+                .map_or(0, |m| m.len()),
+        })
+        .collect();
+    let active = settings::load(&state.data_dir)?
+        .active_model
+        .filter(|file| models.iter().any(|m| m.downloaded && m.model.file == file));
+    Ok(ModelsOverview { models, active })
+}
+
+/// Downloads (or resumes) a catalog model and sends progress (0–100). The first model downloaded
+/// becomes the active one.
+#[tauri::command]
+pub async fn download_model(
+    state: State<'_, AppState>,
+    file: String,
+    on_progress: Channel<u8>,
+) -> Result<()> {
+    let model = models::find(&file)?;
+    let guard = DownloadGuard::acquire(&state.downloads, model.file)?;
+    let mut last = None;
+    models::download(
+        &state.http,
+        &state.data_dir,
+        model,
+        &guard.cancel,
+        |bytes| {
+            let percent = (bytes.saturating_mul(100) / model.size).min(100) as u8;
+            if last != Some(percent) {
+                last = Some(percent);
+                let _ = on_progress.send(percent);
+            }
+        },
+    )
+    .await?;
+    let mut current = settings::load(&state.data_dir)?;
+    if current.active_model.is_none() {
+        current.active_model = Some(model.file.to_owned());
+        settings::save(&state.data_dir, &current)?;
+    }
+    Ok(())
+}
+
+/// Stops a model download. The partial file is kept so it can resume.
+#[tauri::command]
+pub fn cancel_model_download(state: State<'_, AppState>, file: String) {
+    if let Some(cancel) = lock(&state.downloads).get(&file) {
+        cancel.store(true, Ordering::Relaxed);
+    }
+}
+
+/// Deletes a model and any partial download, stopping `llama-server` first if it uses it.
+#[tauri::command]
+pub async fn remove_model(state: State<'_, AppState>, file: String) -> Result<()> {
+    let model = models::find(&file)?;
+    if lock(&state.downloads).contains_key(model.file) {
+        return Err(AppError::other(format!(
+            "Cancel the download of {} first",
+            model.name
+        )));
+    }
+    let path = models::model_path(&state.data_dir, model);
+    {
+        let _starting = state.llm_start.lock().await;
+        let mut current = lock(&state.llm);
+        if current.as_ref().is_some_and(|s| s.model == path) {
+            *current = None; // Windows cannot delete a file in use.
+        }
+    }
+    for path in [path, models::part_path(&state.data_dir, model)] {
+        match std::fs::remove_file(path) {
+            Err(e) if e.kind() != std::io::ErrorKind::NotFound => return Err(e.into()),
+            _ => {}
+        }
+    }
+    let mut current = settings::load(&state.data_dir)?;
+    if current.active_model.as_deref() == Some(model.file) {
+        current.active_model = None;
+        settings::save(&state.data_dir, &current)?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn set_active_model(state: State<'_, AppState>, file: String) -> Result<()> {
+    let model = models::find(&file)?;
+    if !models::model_path(&state.data_dir, model).is_file() {
+        return Err(AppError::other(format!("{} is not downloaded", model.name)));
+    }
+    let mut current = settings::load(&state.data_dir)?;
+    current.active_model = Some(model.file.to_owned());
+    settings::save(&state.data_dir, &current)
+}
+
 /// A poisoned lock only means another thread panicked; the data is still usable.
 fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(|e| e.into_inner())
@@ -171,7 +291,7 @@ pub async fn install_entry(
     entry: &DocEntry,
     mut on_percent: impl FnMut(u8),
 ) -> Result<()> {
-    let _guard = InstallGuard::acquire(&state.installing, &entry.slug)?;
+    let _guard = DownloadGuard::acquire(&state.downloads, &entry.slug)?;
     let total = entry.db_size.max(1);
     let mut last = None;
     install::install(&state.http, &state.data_dir, entry, |bytes| {
@@ -184,28 +304,32 @@ pub async fn install_entry(
     .await
 }
 
-struct InstallGuard<'a> {
-    set: &'a Mutex<HashSet<String>>,
-    slug: String,
+struct DownloadGuard<'a> {
+    map: &'a Mutex<HashMap<String, Arc<AtomicBool>>>,
+    key: String,
+    cancel: Arc<AtomicBool>,
 }
 
-impl<'a> InstallGuard<'a> {
-    fn acquire(set: &'a Mutex<HashSet<String>>, slug: &str) -> Result<Self> {
-        let mut slugs = lock(set);
-        if !slugs.insert(slug.to_owned()) {
+impl<'a> DownloadGuard<'a> {
+    fn acquire(map: &'a Mutex<HashMap<String, Arc<AtomicBool>>>, key: &str) -> Result<Self> {
+        let cancel = Arc::new(AtomicBool::new(false));
+        let mut downloads = lock(map);
+        if downloads.contains_key(key) {
             return Err(AppError::other(format!(
-                "{slug} is already being installed"
+                "{key} is already being downloaded"
             )));
         }
+        downloads.insert(key.to_owned(), cancel.clone());
         Ok(Self {
-            set,
-            slug: slug.to_owned(),
+            map,
+            key: key.to_owned(),
+            cancel,
         })
     }
 }
 
-impl Drop for InstallGuard<'_> {
+impl Drop for DownloadGuard<'_> {
     fn drop(&mut self) {
-        lock(self.set).remove(&self.slug);
+        lock(self.map).remove(&self.key);
     }
 }
