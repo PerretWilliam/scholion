@@ -35,6 +35,7 @@ import {
   createChatTransport,
   type Sources,
 } from "@/lib/chat-transport";
+import { t, useLanguage } from "@/lib/i18n";
 import { linkCitations } from "@/lib/prompts";
 
 interface ChatProps {
@@ -64,6 +65,7 @@ export function Chat({
   onBusy,
   onMessages,
 }: ChatProps) {
+  useLanguage();
   // Refs, because the runtime keeps the callbacks it was created with.
   const save = useRef(onMessages);
   save.current = onMessages;
@@ -103,10 +105,9 @@ export function Chat({
           <div className="mx-auto max-w-3xl space-y-6 p-6">
             <AuiIf condition={(s) => s.thread.isEmpty}>
               <p className="pt-12 text-center text-muted-foreground text-sm">
-                Ask a question about the selected documentation, for example “how do I copy a
-                string?”
+                {t("chat.empty")}
                 <br />
-                Shortcuts: ⌘/Ctrl+N new chat · +K question field · +D next documentation
+                {t("chat.shortcuts")}
               </p>
             </AuiIf>
             <ThreadPrimitive.Messages>
@@ -133,12 +134,14 @@ function BusyReporter({ onBusy }: { onBusy: (busy: boolean) => void }) {
 }
 
 function Composer({ leftTools, rightTools }: Pick<ChatProps, "leftTools" | "rightTools">) {
+  useLanguage();
   return (
     <ComposerPrimitive.Root className="mx-auto w-full max-w-3xl px-6 pb-6">
       <div className="rounded-xl border bg-background shadow-sm focus-within:ring-2 focus-within:ring-ring/50">
         <ComposerPrimitive.Input
-          aria-label="Question"
-          placeholder="Ask about the docs…"
+          aria-label={t("chat.question")}
+          data-question-field
+          placeholder={t("chat.placeholder")}
           className="block max-h-40 min-h-12 w-full resize-none bg-transparent px-4 pt-3 text-sm outline-none"
           autoFocus
         />
@@ -148,14 +151,14 @@ function Composer({ leftTools, rightTools }: Pick<ChatProps, "leftTools" | "righ
             {rightTools}
             <AuiIf condition={(s) => !s.thread.isRunning}>
               <ComposerPrimitive.Send asChild>
-                <Button size="icon-sm" aria-label="Send">
+                <Button size="icon-sm" aria-label={t("chat.send")}>
                   <ArrowUp />
                 </Button>
               </ComposerPrimitive.Send>
             </AuiIf>
             <AuiIf condition={(s) => s.thread.isRunning}>
               <ComposerPrimitive.Cancel asChild>
-                <Button size="icon-sm" variant="outline" aria-label="Stop">
+                <Button size="icon-sm" variant="outline" aria-label={t("chat.stop")}>
                   <Square />
                 </Button>
               </ComposerPrimitive.Cancel>
@@ -178,6 +181,7 @@ function UserMessage() {
 }
 
 function AssistantMessage() {
+  useLanguage();
   return (
     <MessagePrimitive.Root className="space-y-3">
       <StatusLine />
@@ -209,7 +213,7 @@ function AssistantMessage() {
       <SourcesFooter />
       <ActionBarPrimitive.Root hideWhenRunning className="flex gap-1">
         <ActionBarPrimitive.Copy asChild>
-          <Button variant="ghost" size="icon-sm" aria-label="Copy the answer">
+          <Button variant="ghost" size="icon-sm" aria-label={t("chat.copy")}>
             <AuiIf condition={(s) => s.message.isCopied}>
               <Check />
             </AuiIf>
@@ -219,7 +223,7 @@ function AssistantMessage() {
           </Button>
         </ActionBarPrimitive.Copy>
         <ActionBarPrimitive.Reload asChild>
-          <Button variant="ghost" size="icon-sm" aria-label="Answer again">
+          <Button variant="ghost" size="icon-sm" aria-label={t("chat.again")}>
             <RotateCcw />
           </Button>
         </ActionBarPrimitive.Reload>
@@ -308,6 +312,7 @@ function AnswerText({ text, running }: { text: string; running: boolean }) {
 }
 
 function SourcesFooter() {
+  useLanguage();
   const openDoc = useContext(OpenDocContext);
   const sources = useSources();
   // DevDocs attribution is HTML from a third party: always sanitize.
@@ -320,7 +325,7 @@ function SourcesFooter() {
     <footer className="space-y-1 border-t pt-2 text-muted-foreground text-xs">
       <p className="flex flex-wrap items-center gap-x-1">
         <DocIcon slug={sources.slug} name={sources.name} className="size-3.5" />
-        Sources ({sources.doc}):{" "}
+        {t("chat.sources", { doc: sources.doc })}{" "}
         {sources.pages.map((page, i) => (
           <span key={page.url}>
             {i > 0 && " · "}[{i + 1}]{" "}

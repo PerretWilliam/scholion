@@ -1,5 +1,7 @@
 // Conversation history, stored by Rust in `history.json` in the app data folder.
+
 import type { ChatMessage, Sources } from "@/lib/chat-transport";
+import { t } from "@/lib/i18n";
 import { getHistory, setHistory } from "@/lib/ipc";
 
 /** Where versions before the history file kept the conversations. */
@@ -53,7 +55,9 @@ export function titleOf(messages: ChatMessage[]): string {
     .map((p) => (p.type === "text" ? p.text : ""))
     .join(" ")
     .trim();
-  return text.length > TITLE_CHARS ? `${text.slice(0, TITLE_CHARS).trimEnd()}…` : text || "Chat";
+  return text.length > TITLE_CHARS
+    ? `${text.slice(0, TITLE_CHARS).trimEnd()}…`
+    : text || t("history.chat");
 }
 
 /** Adds or replaces a conversation; the most recently updated comes first. */
@@ -78,13 +82,15 @@ export function matches(c: Conversation, query: string): boolean {
 /** The conversation as a Markdown document, with the sources under each answer. */
 export function toMarkdown(c: Conversation): string {
   const turns = c.messages.map((m) => {
-    if (m.role === "user") return `## Question\n\n${textOf(m)}`;
+    if (m.role === "user") return `## ${t("export.question")}\n\n${textOf(m)}`;
     const sources = m.parts.find((p) => p.type === "data-sources") as { data: Sources } | undefined;
     const list = (sources?.data.pages ?? [])
       .map((p, i) => `[${i + 1}] [${p.title}](${p.url})`)
       .join("  \n");
-    const footer = sources ? `\n\n**Sources (${sources.data.doc})**  \n${list}` : "";
-    return `## Answer\n\n${textOf(m)}${footer}`;
+    const footer = sources
+      ? `\n\n**${t("export.sources", { doc: sources.data.doc })}**  \n${list}`
+      : "";
+    return `## ${t("export.answer")}\n\n${textOf(m)}${footer}`;
   });
   return `# ${c.title}\n\n${turns.join("\n\n")}\n`;
 }

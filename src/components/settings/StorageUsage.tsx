@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { formatBytes } from "@/lib/format";
+import { t, useLanguage } from "@/lib/i18n";
 import { getStorageUsage, type StorageUsage as Usage } from "@/lib/ipc";
 
 /** Disk space taken by what the app stores. Read when Settings opens. */
 export function StorageUsage() {
+  useLanguage();
   const [usage, setUsage] = useState<Usage | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -16,15 +18,15 @@ export function StorageUsage() {
   const rows =
     usage &&
     ([
-      ["Models", usage.models],
-      ["Documentation", usage.docs],
-      ["Conversation history", usage.history],
+      [t("models.title"), usage.models],
+      [t("common.documentation"), usage.docs],
+      [t("storage.history"), usage.history],
     ] as const);
 
   return (
     <section className="space-y-3" aria-labelledby="storage-heading">
       <h2 id="storage-heading" className="font-semibold">
-        Storage
+        {t("storage.title")}
       </h2>
       {error && (
         <p role="alert" className="text-destructive text-sm">

@@ -6,8 +6,9 @@ Guidance for AI agents working in this repository.
 
 **Everything in this repository is written in English**: code, identifiers, comments, commit
 messages, docs, UI strings, error messages, logs, CI config. The user may chat in French; the
-repository stays English. The only non-English output allowed is the model's answer to the end
-user, which follows the language of the question.
+repository stays English. The only non-English content allowed is the model's answer to the end
+user, which follows the language of the question, and the translations in `src/locales/`
+(`en.json` is the reference: every new UI string goes there first, through `t("key")`).
 
 ## What this is
 
@@ -42,7 +43,8 @@ Run `pnpm check` before declaring work done.
 - `src/`: React frontend. `@/` aliases `src/`.
   - `components/ui/`: shadcn/ui primitives (generated with `pnpm dlx shadcn add`; edit sparingly).
   - `components/chat/`, `components/settings/`: app screens.
-  - `lib/`: IPC wrappers, chat transport, prompts, utilities.
+  - `lib/`: IPC wrappers, chat transport, prompts, utilities, `i18n.ts` (translations).
+  - `locales/`: one JSON file per interface language.
 - `src-tauri/`: Rust backend. All `#[tauri::command]` functions live in `commands.rs`.
 - `docs/`: spec and architecture.
 

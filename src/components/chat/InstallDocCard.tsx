@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import type { ChatData } from "@/lib/chat-transport";
 import { docTitle, formatBytes } from "@/lib/format";
+import { t, useLanguage } from "@/lib/i18n";
 import { installDoc } from "@/lib/ipc";
 
 /** Lets cards in the chat update the doc picker of the chat screen. */
@@ -15,6 +16,7 @@ export const DocActions = createContext<{
 
 /** Offers to install the doc a question names. Nothing is downloaded without a click. */
 export function InstallDocCard({ data }: { data: ChatData["install"] }) {
+  useLanguage();
   const { reloadDocs, selectDoc } = useContext(DocActions);
   const aui = useAui();
   const [slug, setSlug] = useState(data.versions[0]?.slug ?? "");
@@ -35,7 +37,7 @@ export function InstallDocCard({ data }: { data: ChatData["install"] }) {
       // Answer the original question now that its doc is here.
       if (data.question) aui.message().reload();
     } catch (e) {
-      setError(`Could not install ${data.name}: ${e}`);
+      setError(`${t("install.error", { name: data.name })}: ${e}`);
     } finally {
       setPercent(null);
     }
@@ -44,7 +46,7 @@ export function InstallDocCard({ data }: { data: ChatData["install"] }) {
   if (installed) {
     return (
       <p className="text-sm">
-        {version ? docTitle(version) : data.name} is installed. Ask your question.
+        {t("install.done", { doc: version ? docTitle(version) : data.name })}
       </p>
     );
   }
@@ -53,15 +55,13 @@ export function InstallDocCard({ data }: { data: ChatData["install"] }) {
     <div className="space-y-3 rounded-md border p-3 text-sm">
       <p className="flex items-center gap-2">
         {version && <DocIcon slug={version.slug} name={data.name} />}
-        <span>
-          The <strong>{data.name}</strong> documentation is not installed yet.
-        </span>
+        <span>{t("install.notInstalled", { name: data.name })}</span>
       </p>
       <div className="flex flex-wrap items-center gap-2">
         {data.versions.length > 1 && (
           <>
             <label htmlFor={versionId} className="sr-only">
-              Version
+              {t("install.version")}
             </label>
             <select
               id={versionId}
@@ -80,10 +80,16 @@ export function InstallDocCard({ data }: { data: ChatData["install"] }) {
         )}
         {percent === null ? (
           <Button size="sm" onClick={install} disabled={!version}>
-            Install {version && `(${formatBytes(version.db_size)})`}
+            {version
+              ? t("install.withSize", { size: formatBytes(version.db_size) })
+              : t("common.install")}
           </Button>
         ) : (
-          <Progress value={percent} className="w-40" aria-label={`Installing ${data.name}`} />
+          <Progress
+            value={percent}
+            className="w-40"
+            aria-label={t("common.installing", { name: data.name })}
+          />
         )}
       </div>
       {error && (
@@ -96,10 +102,12 @@ export function InstallDocCard({ data }: { data: ChatData["install"] }) {
 }
 
 export function UnknownDocNotice({ data }: { data: ChatData["unknown-doc"] }) {
+  useLanguage();
   return (
     <p className="text-sm">
-      DevDocs has no documentation named “{data.name}”.
-      {data.suggestions.length > 0 && ` Did you mean ${data.suggestions.join(", ")}?`}
+      {t("install.unknown", { name: data.name })}
+      {data.suggestions.length > 0 &&
+        ` ${t("install.didYouMean", { names: data.suggestions.join(", ") })}`}
     </p>
   );
 }

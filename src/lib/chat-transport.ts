@@ -1,5 +1,6 @@
 // The chat pipeline, run in the webview: question → doc intent → search → passages → streamed
 // answer from the local llama-server. See docs/architecture.md, "Overview".
+
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import {
   type ChatTransport,
@@ -10,6 +11,7 @@ import {
   type UIMessageStreamWriter,
 } from "ai";
 import { docTitle } from "@/lib/format";
+import { t } from "@/lib/i18n";
 import {
   type Cloud,
   type DocEntry,
@@ -135,7 +137,7 @@ async function answer(
   const status = (text: string) =>
     writer.write({ type: "data-status", id: "status", data: { text } });
 
-  status("Searching the docs…");
+  status(t("status.search"));
   const [intent, { installed }] = await Promise.all([detectDoc(asked), getDocs()]);
   const docs = installed.map((d) => d.entry);
   if (intent?.kind === "available") {
@@ -152,22 +154,19 @@ async function answer(
     context.selectDoc(intent.slug);
   }
   if (!doc) {
-    writeText(
-      writer,
-      'No documentation is installed yet. Name one in your question ("I want the Python docs") or install it in Settings.',
-    );
+    writeText(writer, t("msg.noDocs"));
     return;
   }
   if (intent?.kind === "installed" && !intent.question) {
-    writeText(writer, `Now using ${docTitle(doc)}. Ask your question.`);
+    writeText(writer, t("msg.nowUsing", { doc: docTitle(doc) }));
     return;
   }
   if (!context.model && !context.cloud) {
-    writeText(writer, "No model is installed. Download one in Settings, or use Search mode.");
+    writeText(writer, t("msg.noModel"));
     return;
   }
 
-  status(context.cloud ? "Contacting the provider…" : "Loading the model…");
+  status(context.cloud ? t("status.contact") : t("status.load"));
   const model = context.cloud
     ? createOpenAICompatible({
         name: context.cloud.provider,
@@ -179,7 +178,7 @@ async function answer(
         baseURL: `http://127.0.0.1:${await startLlm(context.model as string)}/v1`,
       }).chatModel("local");
 
-  status("Searching the docs…");
+  status(t("status.search"));
   const title = docTitle(doc);
   let question = asked;
   if (history.length && needsRewrite(asked)) {
@@ -209,10 +208,7 @@ async function answer(
   });
   const pages = await findPages(doc, parseKeywords(text, question), question);
   if (pages.length === 0) {
-    writeText(
-      writer,
-      `Nothing in the ${title} documentation matches this question. Try other words, or browse it in Search mode.`,
-    );
+    writeText(writer, t("msg.nothing", { doc: title }));
     return;
   }
   const passages = await Promise.all(
@@ -229,7 +225,7 @@ async function answer(
     },
   });
 
-  status("Writing the answer…");
+  status(t("status.write"));
   const result = streamText({
     model,
     instructions: answerInstructions(title),

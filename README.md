@@ -15,6 +15,9 @@ small language model that runs entirely on your machine.
 - **Conversations that remember**: follow-up questions ("and with a dict?") are understood.
   History is saved locally, searchable, renamable and exportable to Markdown.
 - **Cross-platform**: macOS, Windows, Linux.
+- **Your language**: the interface comes in 21 languages (pick one in the header, with how much of
+  it is translated). Answers follow the language of your question.
+  [Adding a language](CONTRIBUTING.md#translations) is one JSON file.
 - **Self-contained**: no Ollama or other runtime to install. Docs ([DevDocs](https://devdocs.io))
   and models download on demand.
 - **Optional cloud model**: bring an OpenRouter or OpenAI key (kept in your OS keychain) if you

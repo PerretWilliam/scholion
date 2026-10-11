@@ -1,3 +1,4 @@
+import { currentLanguage, t } from "@/lib/i18n";
 import type { DocEntry } from "@/lib/ipc";
 
 const UNITS = ["B", "KB", "MB", "GB"];
@@ -10,7 +11,14 @@ export function formatBytes(bytes: number): string {
     value /= 1000;
     unit++;
   }
-  return `${unit === 0 ? value : value.toFixed(1)} ${UNITS[unit]}`;
+  const number =
+    unit === 0
+      ? String(value)
+      : value.toLocaleString(currentLanguage(), {
+          minimumFractionDigits: 1,
+          maximumFractionDigits: 1,
+        });
+  return `${number} ${UNITS[unit]}`;
 }
 
 /** "Python 3.15.0", "Angular 22.0.0", or just "C" when DevDocs gives no version. */
@@ -20,5 +28,7 @@ export function docTitle(doc: DocEntry): string {
 }
 
 export function formatCheckedAt(unixSeconds: number): string {
-  return unixSeconds === 0 ? "never" : new Date(unixSeconds * 1000).toLocaleString();
+  return unixSeconds === 0
+    ? t("docs.never")
+    : new Date(unixSeconds * 1000).toLocaleString(currentLanguage());
 }

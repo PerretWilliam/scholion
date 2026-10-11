@@ -5,6 +5,7 @@ import { DocIcon } from "@/components/DocIcon";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { docTitle, formatBytes } from "@/lib/format";
+import { t, useLanguage } from "@/lib/i18n";
 import {
   DOCS_CHANGED_EVENT,
   type DocEntry,
@@ -21,6 +22,7 @@ const SUGGESTED_DOCS = ["Python", "JavaScript", "TypeScript", "Rust", "Go", "HTM
 
 /** First launch: the recommended model and a few popular docs, with the disk space they take. */
 export function Welcome({ onDone }: { onDone: () => void }) {
+  useLanguage();
   const [model, setModel] = useState<ModelStatus | null>(null);
   const [docs, setDocs] = useState<DocEntry[]>([]);
   const [installed, setInstalled] = useState(new Set<string>());
@@ -67,7 +69,7 @@ export function Welcome({ onDone }: { onDone: () => void }) {
     try {
       await run((percent) => setProgress((p) => ({ ...p, [key]: percent })));
     } catch (e) {
-      setError(`Could not download ${label}: ${e}`);
+      setError(`${t("welcome.errDownload", { name: label })}: ${e}`);
     } finally {
       setProgress(({ [key]: _, ...rest }) => rest);
       await reload();
@@ -79,16 +81,10 @@ export function Welcome({ onDone }: { onDone: () => void }) {
   return (
     <div className="mx-auto max-w-2xl space-y-8 p-6">
       <div className="space-y-2">
-        <h2 className="font-semibold text-xl">Welcome to Scholion</h2>
-        <p className="text-muted-foreground text-sm">
-          Scholion answers programming questions from documentation stored on this computer, with a
-          language model that also runs here. Download both once; after that everything works
-          offline.
-        </p>
+        <h2 className="font-semibold text-xl">{t("welcome.title")}</h2>
+        <p className="text-muted-foreground text-sm">{t("welcome.intro")}</p>
         {free !== null && (
-          <p className="text-sm">
-            Free disk space: <strong>{formatBytes(free)}</strong>
-          </p>
+          <p className="text-sm">{t("welcome.freeSpace", { size: formatBytes(free) })}</p>
         )}
       </div>
 
@@ -100,7 +96,7 @@ export function Welcome({ onDone }: { onDone: () => void }) {
 
       <section className="space-y-2" aria-labelledby="welcome-model">
         <h3 id="welcome-model" className="font-medium">
-          1. A model
+          {t("welcome.model")}
         </h3>
         {model && (
           <ul className="rounded-md border">
@@ -118,15 +114,12 @@ export function Welcome({ onDone }: { onDone: () => void }) {
             />
           </ul>
         )}
-        <p className="text-muted-foreground text-xs">
-          Larger and smaller models are in Settings. Without a model, the docs can still be
-          searched.
-        </p>
+        <p className="text-muted-foreground text-xs">{t("welcome.modelHint")}</p>
       </section>
 
       <section className="space-y-2" aria-labelledby="welcome-docs">
         <h3 id="welcome-docs" className="font-medium">
-          2. One or two docs
+          {t("welcome.docs")}
         </h3>
         {docs.length > 0 ? (
           <ul className="divide-y rounded-md border">
@@ -148,17 +141,13 @@ export function Welcome({ onDone }: { onDone: () => void }) {
             ))}
           </ul>
         ) : (
-          <p className="text-muted-foreground text-sm">
-            Loading the doc list… It needs an internet connection.
-          </p>
+          <p className="text-muted-foreground text-sm">{t("welcome.loadingDocs")}</p>
         )}
-        <p className="text-muted-foreground text-xs">
-          Hundreds more are in Settings, or ask for one in the chat: “I want the Ruby docs”.
-        </p>
+        <p className="text-muted-foreground text-xs">{t("welcome.docsHint")}</p>
       </section>
 
       <Button onClick={onDone}>
-        {model?.downloaded || installed.size > 0 ? "Start" : "Skip for now"}
+        {model?.downloaded || installed.size > 0 ? t("welcome.start") : t("welcome.skip")}
       </Button>
     </div>
   );
@@ -177,6 +166,7 @@ interface ItemProps {
 }
 
 function Item({ icon, title, detail, done, progress, fits, onDownload }: ItemProps) {
+  useLanguage();
   return (
     <li className="flex flex-wrap items-center gap-3 px-3 py-2">
       {icon}
@@ -184,21 +174,25 @@ function Item({ icon, title, detail, done, progress, fits, onDownload }: ItemPro
         <p className="font-medium text-sm">{title}</p>
         <p className="text-muted-foreground text-xs">
           {detail}
-          {!fits && !done && " · not enough free disk space"}
+          {!fits && !done && ` · ${t("welcome.noSpace")}`}
         </p>
       </div>
       {done ? (
         <span className="flex items-center gap-1 text-muted-foreground text-sm">
-          <Check className="size-4" /> Installed
+          <Check className="size-4" /> {t("common.installed")}
         </span>
       ) : progress === undefined ? (
         <Button size="sm" variant="outline" disabled={!fits} onClick={onDownload}>
-          Download
+          {t("common.download")}
         </Button>
       ) : progress < 100 ? (
-        <Progress value={progress} className="w-32" aria-label={`Downloading ${title}`} />
+        <Progress
+          value={progress}
+          className="w-32"
+          aria-label={t("common.downloading", { name: title })}
+        />
       ) : (
-        <span className="text-muted-foreground text-xs">Verifying…</span>
+        <span className="text-muted-foreground text-xs">{t("common.verifying")}</span>
       )}
     </li>
   );

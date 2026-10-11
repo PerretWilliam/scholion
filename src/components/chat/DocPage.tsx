@@ -14,6 +14,7 @@ import { createContext, useEffect, useMemo, useRef, useState } from "react";
 import { codeToHtml } from "shiki";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { t, useLanguage } from "@/lib/i18n";
 import type { Page } from "@/lib/ipc";
 
 /** Opens a page of an installed doc (entry path) in the reader next to the chat. */
@@ -144,12 +145,13 @@ async function highlightCode(root: HTMLElement, isStale: () => boolean) {
 export function DocPage({
   slug,
   page,
-  backLabel = "Results",
+  backLabel,
   expanded,
   onToggleExpanded,
   onBack,
   onNavigate,
 }: DocPageProps) {
+  useLanguage();
   // DevDocs HTML is third-party content rendered next to the IPC bridge: always sanitize.
   const html = useMemo(
     () => DOMPurify.sanitize(page.html, { FORBID_TAGS: ["style", "form"], FORBID_ATTR: ["style"] }),
@@ -250,7 +252,7 @@ export function DocPage({
     <article className="space-y-4">
       <div className="flex items-center justify-between gap-2">
         <Button variant="ghost" size="sm" onClick={onBack}>
-          <ArrowLeft /> {backLabel}
+          <ArrowLeft /> {backLabel ?? t("page.back")}
         </Button>
         <div className="flex gap-2">
           {canFind && (
@@ -260,17 +262,17 @@ export function DocPage({
               onClick={() => setFind((f) => (f ? null : { query: "", current: 0 }))}
               aria-pressed={!!find}
             >
-              <Search /> Find
+              <Search /> {t("page.find")}
             </Button>
           )}
           {onToggleExpanded && (
             <Button variant="outline" size="sm" onClick={onToggleExpanded}>
               {expanded ? <Minimize2 /> : <Maximize2 />}
-              {expanded ? "Exit full screen" : "Full screen"}
+              {expanded ? t("page.exitFullScreen") : t("page.fullScreen")}
             </Button>
           )}
           <Button variant="outline" size="sm" onClick={() => openUrl(page.url)}>
-            <ExternalLink /> Open on devdocs.io
+            <ExternalLink /> {t("page.openWeb")}
           </Button>
         </div>
       </div>
@@ -279,8 +281,8 @@ export function DocPage({
           <Input
             ref={searchField}
             type="search"
-            aria-label="Find in this page"
-            placeholder="Find in this page…"
+            aria-label={t("page.findLabel")}
+            placeholder={t("page.findPlaceholder")}
             className="h-8 flex-1"
             value={find.query}
             autoFocus
@@ -295,23 +297,28 @@ export function DocPage({
             }}
           />
           <span className="min-w-14 text-center text-muted-foreground text-xs" aria-live="polite">
-            {find.query && (matches ? `${current + 1} / ${matches}` : "No match")}
+            {find.query && (matches ? `${current + 1} / ${matches}` : t("page.noMatch"))}
           </span>
           <Button
             variant="ghost"
             size="icon-sm"
-            aria-label="Previous match"
+            aria-label={t("page.prevMatch")}
             onClick={() => step(-1)}
           >
             <ArrowUp />
           </Button>
-          <Button variant="ghost" size="icon-sm" aria-label="Next match" onClick={() => step(1)}>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={t("page.nextMatch")}
+            onClick={() => step(1)}
+          >
             <ArrowDown />
           </Button>
           <Button
             variant="ghost"
             size="icon-sm"
-            aria-label="Close find"
+            aria-label={t("page.closeFind")}
             onClick={() => setFind(null)}
           >
             <X />

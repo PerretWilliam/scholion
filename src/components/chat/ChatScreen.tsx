@@ -26,6 +26,7 @@ import {
   toMarkdown,
   upsert,
 } from "@/lib/history";
+import { t, useLanguage } from "@/lib/i18n";
 import {
   type Cloud,
   type DocEntry,
@@ -57,6 +58,7 @@ interface Props {
  * model, it falls back to searching the docs directly.
  */
 export function ChatScreen({ visible, onOpenSettings }: Props) {
+  useLanguage();
   const [docs, setDocs] = useState<DocEntry[] | null>(null);
   const [slug, setSlug] = useState("");
   const [models, setModels] = useState<ModelStatus[]>([]);
@@ -113,7 +115,7 @@ export function ChatScreen({ visible, onOpenSettings }: Props) {
       setUseCloud(false);
       setModel(file);
     } catch (e) {
-      setError(`Could not switch models: ${e}`);
+      setError(`${t("chat.errSwitchModel")}: ${e}`);
     }
   }
 
@@ -134,7 +136,7 @@ export function ChatScreen({ visible, onOpenSettings }: Props) {
         setConversations(list);
       })
       .catch((e) => {
-        setError(`Could not read the history: ${e}`);
+        setError(`${t("chat.errHistoryRead")}: ${e}`);
         setConversations([]);
       });
   }, []);
@@ -142,7 +144,7 @@ export function ChatScreen({ visible, onOpenSettings }: Props) {
   function persist(next: Conversation[]) {
     conversationsRef.current = next;
     setConversations(next);
-    saveConversations(next).catch((e) => setError(`Could not save the history: ${e}`));
+    saveConversations(next).catch((e) => setError(`${t("chat.errHistorySave")}: ${e}`));
   }
 
   function open(id: string) {
@@ -184,7 +186,7 @@ export function ChatScreen({ visible, onOpenSettings }: Props) {
     try {
       setExported(await saveExport(`${saved.title}.md`, toMarkdown(saved)));
     } catch (e) {
-      setError(`Could not export the conversation: ${e}`);
+      setError(`${t("chat.errExport")}: ${e}`);
     }
   }
 
@@ -192,7 +194,7 @@ export function ChatScreen({ visible, onOpenSettings }: Props) {
     try {
       setReader({ slug: docSlug, page: await getPage(docSlug, path) });
     } catch (e) {
-      setError(`Could not open the page: ${e}`);
+      setError(`${t("chat.errOpenPage")}: ${e}`);
     }
   }, []);
 
@@ -229,7 +231,7 @@ export function ChatScreen({ visible, onOpenSettings }: Props) {
         if (conversationsRef.current.some((c) => c.id === currentId)) open(crypto.randomUUID());
       } else if (key === "k") {
         const fields = document.querySelectorAll<HTMLTextAreaElement>(
-          'textarea[aria-label="Question"]',
+          "textarea[data-question-field]",
         );
         [...fields].find((f) => f.offsetParent !== null)?.focus();
       } else if (key === "d" && docs && docs.length > 1) {
@@ -254,10 +256,10 @@ export function ChatScreen({ visible, onOpenSettings }: Props) {
 
   const docPicker = (
     <Picker
-      label="Documentation"
+      label={t("common.documentation")}
       value={slug}
-      placeholder="No docs installed"
-      manageLabel="Add or remove docs…"
+      placeholder={t("chat.noDocs")}
+      manageLabel={t("chat.addDocs")}
       onChange={setSlug}
       onManage={onOpenSettings}
     >
@@ -282,16 +284,16 @@ export function ChatScreen({ visible, onOpenSettings }: Props) {
           role="status"
           className="mx-auto flex w-full max-w-3xl items-center gap-2 px-6 pt-4 text-sm"
         >
-          <span className="min-w-0 truncate">Saved to {exported}</span>
+          <span className="min-w-0 truncate">{t("chat.saved", { path: exported })}</span>
           <Button
             size="sm"
             variant="outline"
             onClick={() => revealItemInDir(exported).catch((e) => setError(String(e)))}
           >
-            Show in folder
+            {t("chat.showInFolder")}
           </Button>
           <Button size="sm" variant="ghost" onClick={() => setExported(null)}>
-            Dismiss
+            {t("common.dismiss")}
           </Button>
         </p>
       )}
@@ -322,9 +324,9 @@ export function ChatScreen({ visible, onOpenSettings }: Props) {
                         leftTools={docPicker}
                         rightTools={
                           <Picker
-                            label="Model"
+                            label={t("common.model")}
                             value={cloud ? CLOUD : (model ?? "")}
-                            manageLabel="Other models…"
+                            manageLabel={t("chat.otherModels")}
                             onChange={selectModel}
                             onManage={onOpenSettings}
                           >
@@ -343,7 +345,7 @@ export function ChatScreen({ visible, onOpenSettings }: Props) {
               {reader && (
                 <aside
                   key={reader.page.url}
-                  aria-label="Documentation page"
+                  aria-label={t("chat.docPage")}
                   className={cn(
                     "fixed inset-0 z-20 overflow-y-auto bg-background p-4",
                     !readerFull && "lg:static lg:z-auto lg:w-[32rem] lg:shrink-0 lg:border-l",
@@ -353,7 +355,7 @@ export function ChatScreen({ visible, onOpenSettings }: Props) {
                     <DocPage
                       slug={reader.slug}
                       page={reader.page}
-                      backLabel="Close"
+                      backLabel={t("common.close")}
                       expanded={readerFull}
                       onToggleExpanded={() => setReaderFull((full) => !full)}
                       onBack={() => {
@@ -372,11 +374,9 @@ export function ChatScreen({ visible, onOpenSettings }: Props) {
         model === null && (
           <div className="min-h-0 flex-1 overflow-auto">
             <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-2 px-6 pt-4 text-sm">
-              <span className="text-muted-foreground">
-                No model installed: search the docs directly, or
-              </span>
+              <span className="text-muted-foreground">{t("chat.noModel")}</span>
               <Button size="sm" variant="outline" onClick={onOpenSettings}>
-                <Settings /> Download a model
+                <Settings /> {t("chat.downloadModel")}
               </Button>
               <div className="ml-auto">{docPicker}</div>
             </div>
