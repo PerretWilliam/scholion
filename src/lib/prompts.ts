@@ -43,6 +43,48 @@ export function parseKeywords(reply: string, question: string): string[] {
   return echoed > terms.length / 2 ? [] : terms.slice(0, MAX_KEYWORDS);
 }
 
+export interface Turn {
+  role: "user" | "assistant";
+  text: string;
+}
+
+/** Earlier turns kept to resolve a follow-up question, and the characters kept of each. */
+export const REWRITE_TURNS = 4;
+const REWRITE_TURN_CHARS = 400;
+
+export function rewriteInstructions(doc: string): string {
+  return [
+    `You prepare a question for a search in the ${doc} documentation.`,
+    "Rewrite the latest question as one standalone question, in the same language, replacing",
+    'references to the conversation ("and with a dict?", "it", "that one") by what they mean.',
+    "If it already stands alone, repeat it unchanged. Reply with the question only.",
+  ].join("\n");
+}
+
+export function rewritePrompt(history: Turn[], question: string): string {
+  const turns = history
+    .slice(-REWRITE_TURNS)
+    .map(
+      (t) => `${t.role === "user" ? "User" : "Assistant"}: ${t.text.slice(0, REWRITE_TURN_CHARS)}`,
+    )
+    .join("\n");
+  return `Conversation:\n${turns}\n\nLatest question: ${question}`;
+}
+
+/** The rewritten question, or the original when the model returned nothing usable. */
+export function parseRewrite(reply: string, question: string): string {
+  const line = reply
+    .split("\n")
+    .map((l) =>
+      l
+        .replace(/^\s*(?:Standalone question|Question)\s*:\s*/i, "")
+        .replace(/^["'`]+|["'`]+$/g, "")
+        .trim(),
+    )
+    .find(Boolean);
+  return line && line.length <= 300 ? line : question;
+}
+
 /** First hits of distinct pages, in order: one passage per page. */
 export function pickPages(hits: SearchHit[], max = MAX_PASSAGES): SearchHit[] {
   const seen = new Set<string>();
@@ -76,6 +118,9 @@ export function answerInstructions(doc: string): string {
     "  to use this correctly. No filler, no repetition.",
     "- Apart from the general knowledge above, use only facts from the passages. If they do not",
     "  answer the question, say so plainly instead of guessing.",
+    "- Support each statement taken from a passage with its number in square brackets, for",
+    "  example [1] or [2][3], placed after the statement. A statement that no passage supports",
+    '  is either left out or marked "(general knowledge)". Never cite a passage you did not use.',
     "- Never write URLs or links: the sources are shown under your answer.",
   ].join("\n");
 }

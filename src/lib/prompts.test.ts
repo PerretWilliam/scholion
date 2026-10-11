@@ -5,7 +5,9 @@ import {
   answerPrompt,
   parseFollowUps,
   parseKeywords,
+  parseRewrite,
   pickPages,
+  rewritePrompt,
 } from "@/lib/prompts";
 
 const hit = (path: string): SearchHit => ({ name: path, path, type: "", url: "" });
@@ -75,5 +77,21 @@ describe("parseFollowUps", () => {
       "Comment définir __init__ ?",
     ]);
     expect(parseFollowUps("No question here.")).toEqual([]);
+  });
+});
+
+describe("rewrite", () => {
+  it("builds a prompt from the latest turns and falls back to the question", () => {
+    const history = [
+      { role: "user", text: "How do I sort a list?" },
+      { role: "assistant", text: "Use sorted()." },
+    ] as const;
+    expect(rewritePrompt([...history], "And with a dict?")).toBe(
+      "Conversation:\nUser: How do I sort a list?\nAssistant: Use sorted().\n\nLatest question: And with a dict?",
+    );
+    expect(parseRewrite('Question: "How do I sort a dict?"\nextra', "x")).toBe(
+      "How do I sort a dict?",
+    );
+    expect(parseRewrite("  \n", "x")).toBe("x");
   });
 });

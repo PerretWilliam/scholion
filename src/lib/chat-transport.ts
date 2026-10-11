@@ -30,7 +30,11 @@ import {
   MAX_PASSAGES,
   parseFollowUps,
   parseKeywords,
+  parseRewrite,
   pickPages,
+  rewriteInstructions,
+  rewritePrompt,
+  type Turn,
 } from "@/lib/prompts";
 import { PROVIDERS, type ProviderId } from "@/lib/providers";
 
@@ -79,7 +83,8 @@ export function createChatTransport(context: () => ChatContext): ChatTransport<C
   return {
     sendMessages: async ({ messages, abortSignal }) =>
       createUIMessageStream<ChatMessage>({
-        execute: ({ writer }) => answer(writer, lastQuestion(messages), context(), abortSignal),
+        execute: ({ writer }) =>
+          answer(writer, lastQuestion(messages), previousTurns(messages), context(), abortSignal),
         onError: (e) => (e instanceof Error ? e.message : String(e)),
       }),
     // Answers are generated locally and not resumable.
@@ -95,6 +100,21 @@ function lastQuestion(messages: ChatMessage[]): string {
     .trim();
 }
 
+const textOf = (m: ChatMessage) =>
+  m.parts
+    .map((p) => (p.type === "text" ? p.text : ""))
+    .join("\n")
+    .trim();
+
+/** Turns before the last question, with text only (install cards and the like are skipped). */
+function previousTurns(messages: ChatMessage[]): Turn[] {
+  const last = messages.map((m) => m.role).lastIndexOf("user");
+  return messages
+    .slice(0, Math.max(last, 0))
+    .map((m) => ({ role: m.role === "user" ? "user" : "assistant", text: textOf(m) }) as Turn)
+    .filter((t) => t.text);
+}
+
 function writeText(writer: Writer, text: string) {
   const id = "text";
   writer.write({ type: "text-start", id });
@@ -102,11 +122,12 @@ function writeText(writer: Writer, text: string) {
   writer.write({ type: "text-end", id });
 }
 
-// ponytail: single-turn. Only the last question is sent: the 8192-token context holds the
-// passages; earlier turns would crowd them out.
+// Earlier turns are not sent to the answer: the 8192-token context holds the passages. They only
+// serve to rewrite a follow-up into a standalone question before searching.
 async function answer(
   writer: Writer,
-  question: string,
+  asked: string,
+  history: Turn[],
   context: ChatContext,
   abortSignal: AbortSignal | undefined,
 ) {
@@ -114,7 +135,7 @@ async function answer(
     writer.write({ type: "data-status", id: "status", data: { text } });
 
   status("Searching the docs…");
-  const [intent, { installed }] = await Promise.all([detectDoc(question), getDocs()]);
+  const [intent, { installed }] = await Promise.all([detectDoc(asked), getDocs()]);
   const docs = installed.map((d) => d.entry);
   if (intent?.kind === "available") {
     writer.write({ type: "data-install", data: intent });
@@ -159,6 +180,24 @@ async function answer(
 
   status("Searching the docs…");
   const title = docTitle(doc);
+  let question = asked;
+  if (history.length) {
+    // "And with a dict?" means nothing alone: make it standalone from the conversation.
+    try {
+      const { text } = await generateText({
+        model,
+        instructions: rewriteInstructions(title),
+        prompt: rewritePrompt(history, asked),
+        maxOutputTokens: 80,
+        temperature: 0,
+        abortSignal,
+      });
+      question = parseRewrite(text, asked);
+    } catch (e) {
+      if (abortSignal?.aborted) throw e;
+      console.warn("Could not rewrite the question", e);
+    }
+  }
   const { text } = await generateText({
     model,
     instructions: keywordInstructions(title),

@@ -260,7 +260,7 @@ function SourcesFooter() {
         Sources ({sources.doc}):{" "}
         {sources.pages.map((page, i) => (
           <span key={page.url}>
-            {i > 0 && " · "}
+            {i > 0 && " · "}[{i + 1}]{" "}
             <button
               type="button"
               className="underline underline-offset-2 hover:text-foreground"

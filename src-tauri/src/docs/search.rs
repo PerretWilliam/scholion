@@ -69,15 +69,52 @@ fn name_rank(name: &str, query: &str) -> Option<u8> {
     }
 }
 
-/// FTS5 query matching any word of `query`, with every word quoted so user input can never be
-/// read as FTS syntax.
-fn fts_query(query: &str) -> Option<String> {
-    let words: Vec<String> = query
+/// Question words that say nothing about the topic: they would match nearly every page.
+const STOP_WORDS: &[&str] = &[
+    "a", "an", "the", "how", "do", "does", "to", "of", "in", "on", "for", "with", "and", "or",
+    "is", "are", "can", "what", "which", "when", "why", "i", "you", "my", "it", "this", "that",
+    "use", "using", "me", "be", "by", "from", "as", "at", "if", "than", "then", "there",
+    // French, the other language the app is used in.
+    "le", "la", "les", "un", "une", "des", "du", "de", "et", "ou", "en", "pour", "avec", "dans",
+    "comment", "quel", "quelle", "est", "sont", "faire", "peut", "que", "qui", "sur", "par",
+];
+
+/// Lowercase words of `text`, without stop words and one-letter words.
+fn topic_words(text: &str) -> Vec<String> {
+    let mut words: Vec<String> = text
+        .to_lowercase()
         .split(|c: char| !c.is_alphanumeric() && c != '_')
-        .filter(|w| w.chars().count() >= 2)
-        .map(|w| format!("\"{w}\""))
+        .filter(|w| w.chars().count() >= 2 && !STOP_WORDS.contains(w))
+        .map(str::to_owned)
         .collect();
-    (!words.is_empty()).then(|| words.join(" OR "))
+    words.dedup();
+    words
+}
+
+/// FTS5 query matching any topic word of `query`, with every word quoted so user input can never
+/// be read as FTS syntax. A question made only of stop words falls back to all its words.
+fn fts_query(query: &str) -> Option<String> {
+    let mut words = topic_words(query);
+    if words.is_empty() {
+        words = query
+            .split(|c: char| !c.is_alphanumeric() && c != '_')
+            .filter(|w| w.chars().count() >= 2)
+            .map(str::to_lowercase)
+            .collect();
+    }
+    let quoted: Vec<String> = words.iter().map(|w| format!("\"{w}\"")).collect();
+    (!quoted.is_empty()).then(|| quoted.join(" OR "))
+}
+
+/// Query words found in a page title, comparing the first four letters so "sorted" meets
+/// "Sorting HOW TO".
+fn title_overlap(title: &str, words: &[String]) -> usize {
+    let title = topic_words(title);
+    let stem = |w: &str| w.chars().take(4).collect::<String>();
+    words
+        .iter()
+        .filter(|q| title.iter().any(|t| stem(t) == stem(q)))
+        .count()
 }
 
 pub fn search(conn: &Connection, slug: &str, query: &str, limit: usize) -> Result<Vec<SearchHit>> {
@@ -119,17 +156,18 @@ pub fn search(conn: &Connection, slug: &str, query: &str, limit: usize) -> Resul
             "SELECT p.path FROM pages_fts JOIN pages p ON p.rowid = pages_fts.rowid \
              WHERE pages_fts MATCH ?1 ORDER BY rank LIMIT ?2",
         )?;
+        // BM25 alone favors long pages that repeat a word; a wider pool is reranked below with
+        // the page title, which says best what a page is about.
         let paths = stmt
-            .query_map((fts, limit as i64), |row| row.get::<_, String>(0))?
+            .query_map((fts, (limit * 8) as i64), |row| row.get::<_, String>(0))?
             .collect::<rusqlite::Result<Vec<_>>>()?;
+        let words = topic_words(&query);
+        let mut found = Vec::new();
         for path in paths {
-            if hits.len() >= limit {
-                break;
-            }
             if seen.insert(path.clone()) {
                 let (name, kind) =
                     page_entry(conn, &path)?.unwrap_or_else(|| (path.clone(), String::new()));
-                hits.push(SearchHit {
+                found.push(SearchHit {
                     name,
                     path,
                     kind,
@@ -137,6 +175,9 @@ pub fn search(conn: &Connection, slug: &str, query: &str, limit: usize) -> Resul
                 });
             }
         }
+        // Stable sort: ties keep the BM25 order.
+        found.sort_by_key(|h| std::cmp::Reverse(title_overlap(&h.name, &words)));
+        hits.extend(found.into_iter().take(limit - hits.len()));
     }
 
     for hit in &mut hits {
@@ -264,6 +305,18 @@ mod tests {
     }
 
     #[test]
+    fn stop_words_are_dropped_and_titles_boost() {
+        assert_eq!(
+            fts_query("How do I sort a list?"),
+            Some("\"sort\" OR \"list\"".into())
+        );
+        assert_eq!(fts_query("how to"), Some("\"how\" OR \"to\"".into()));
+        let words = topic_words("sorted list by key");
+        assert_eq!(title_overlap("Sorting HOW TO", &words), 1);
+        assert_eq!(title_overlap("Sets", &words), 0);
+    }
+
+    #[test]
     fn fts_syntax_in_input_is_inert() {
         let (_dir, conn) = c_doc();
         for q in ["\"", "a OR", "NEAR(", "*", "-x", "  "] {
@@ -271,7 +324,7 @@ mod tests {
         }
         assert_eq!(
             fts_query("str\"cpy OR x"),
-            Some("\"str\" OR \"cpy\" OR \"OR\"".into())
+            Some("\"str\" OR \"cpy\"".into())
         );
     }
 
