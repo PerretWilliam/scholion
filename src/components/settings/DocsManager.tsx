@@ -2,6 +2,7 @@ import { listen } from "@tauri-apps/api/event";
 import { RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { DocIcon } from "@/components/DocIcon";
+import { RemoveAllButton } from "@/components/settings/RemoveAllButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -89,6 +90,18 @@ export function DocsManager() {
     }
   }
 
+  async function removeAll() {
+    setError(null);
+    try {
+      for (const { entry } of overview?.installed ?? []) {
+        await removeDoc(entry.slug);
+      }
+    } catch (e) {
+      setError(`Could not remove all docs: ${e}`);
+    }
+    await reload();
+  }
+
   async function toggleAutoUpdate(enabled: boolean) {
     setLocalSettings((s) => s && { ...s, auto_update_docs: enabled });
     try {
@@ -149,7 +162,16 @@ export function DocsManager() {
       </div>
 
       <div className="space-y-2">
-        <h3 className="font-medium text-sm">Installed</h3>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="font-medium text-sm">Installed</h3>
+          {overview?.installed.length ? (
+            <RemoveAllButton
+              what="all docs"
+              size={formatBytes(overview.installed.reduce((sum, d) => sum + d.entry.db_size, 0))}
+              onConfirm={removeAll}
+            />
+          ) : null}
+        </div>
         {overview?.installed.length ? (
           <ul className="divide-y rounded-md border">
             {overview.installed.map(({ entry, update_available, newer_version }) => (

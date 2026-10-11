@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { RemoveAllButton } from "@/components/settings/RemoveAllButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -65,15 +66,41 @@ export function ModelsManager() {
     run(() => cancelModelDownload(model.file), `Could not cancel ${model.name}`);
   }
 
+  // Downloaded models and partial downloads that are not running right now.
+  const removable = (overview?.models ?? []).filter(
+    (m) => (m.downloaded || m.partial_bytes > 0) && progress[m.file] === undefined,
+  );
+  const removableBytes = removable.reduce(
+    (sum, m) => sum + (m.downloaded ? m.size : m.partial_bytes),
+    0,
+  );
+
+  function removeAll() {
+    run(async () => {
+      for (const model of removable) {
+        await removeModel(model.file);
+      }
+    }, "Could not remove all models");
+  }
+
   return (
     <section className="space-y-4" aria-labelledby="models-heading">
-      <div>
-        <h2 id="models-heading" className="font-semibold">
-          Models
-        </h2>
-        <p className="text-muted-foreground text-xs">
-          The model writes answers from the docs. It runs on this computer, offline.
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 id="models-heading" className="font-semibold">
+            Models
+          </h2>
+          <p className="text-muted-foreground text-xs">
+            The model writes answers from the docs. It runs on this computer, offline.
+          </p>
+        </div>
+        {removable.length > 0 && (
+          <RemoveAllButton
+            what="all models"
+            size={formatBytes(removableBytes)}
+            onConfirm={removeAll}
+          />
+        )}
       </div>
 
       {error && (
