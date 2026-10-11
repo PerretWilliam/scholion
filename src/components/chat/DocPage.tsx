@@ -1,13 +1,23 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
 import DOMPurify from "dompurify";
 import { ArrowLeft, ExternalLink } from "lucide-react";
-import { useMemo } from "react";
+import { createContext, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import type { Page } from "@/lib/ipc";
+
+/** Opens a page of an installed doc (entry path) in the reader next to the chat. */
+export const OpenDocContext = createContext<(slug: string, path: string) => void>(() => {});
+
+/** Entry path of a DevDocs page URL, as built by `page_url` in Rust. */
+export function entryPath(slug: string, url: string): string {
+  return url.slice(`${DEVDOCS_ORIGIN}/${slug}/`.length);
+}
 
 interface DocPageProps {
   slug: string;
   page: Page;
+  /** Label of the back button. */
+  backLabel?: string;
   onBack: () => void;
   /** Opens another page of the same doc, given its entry path. */
   onNavigate: (path: string) => void;
@@ -48,9 +58,15 @@ export function resolveDocLink(
   return null;
 }
 
-export function DocPage({ slug, page, onBack, onNavigate }: DocPageProps) {
+export function DocPage({ slug, page, backLabel = "Results", onBack, onNavigate }: DocPageProps) {
   // DevDocs HTML is third-party content rendered next to the IPC bridge: always sanitize.
   const html = useMemo(() => DOMPurify.sanitize(page.html), [page.html]);
+
+  // An entry path can point into a long page: show that section.
+  useEffect(() => {
+    const id = decodeURIComponent(new URL(page.url).hash.slice(1));
+    if (id) document.getElementById(id)?.scrollIntoView();
+  }, [page.url]);
 
   function handleClick(event: React.MouseEvent<HTMLElement>) {
     const anchor = (event.target as HTMLElement).closest("a");
@@ -72,7 +88,7 @@ export function DocPage({ slug, page, onBack, onNavigate }: DocPageProps) {
     <article className="space-y-4">
       <div className="flex items-center justify-between gap-2">
         <Button variant="ghost" size="sm" onClick={onBack}>
-          <ArrowLeft /> Results
+          <ArrowLeft /> {backLabel}
         </Button>
         <Button variant="outline" size="sm" onClick={() => openUrl(page.url)}>
           <ExternalLink /> Open on devdocs.io

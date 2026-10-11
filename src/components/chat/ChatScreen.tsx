@@ -2,6 +2,7 @@ import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { Settings } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Chat } from "@/components/chat/Chat";
+import { DocPage, OpenDocContext } from "@/components/chat/DocPage";
 import { DocSearch } from "@/components/chat/DocSearch";
 import { DocActions } from "@/components/chat/InstallDocCard";
 import { Sidebar } from "@/components/chat/Sidebar";
@@ -30,8 +31,10 @@ import {
   type DocEntry,
   getDocs,
   getModels,
+  getPage,
   getSettings,
   type ModelStatus,
+  type Page,
   saveExport,
   setActiveModel,
   setSettings,
@@ -65,6 +68,8 @@ export function ChatScreen({ visible, onOpenSettings }: Props) {
   const [error, setError] = useState<string | null>(null);
   /** Path of the last exported file, until dismissed. */
   const [exported, setExported] = useState<string | null>(null);
+  /** Doc page open in the reader next to the chat. */
+  const [reader, setReader] = useState<{ slug: string; page: Page } | null>(null);
   /** Conversations answering right now. */
   const [busy, setBusy] = useState<ReadonlySet<string>>(new Set());
 
@@ -180,6 +185,14 @@ export function ChatScreen({ visible, onOpenSettings }: Props) {
     }
   }
 
+  const openDoc = useCallback(async (docSlug: string, path: string) => {
+    try {
+      setReader({ slug: docSlug, page: await getPage(docSlug, path) });
+    } catch (e) {
+      setError(`Could not open the page: ${e}`);
+    }
+  }, []);
+
   function setChatBusy(id: string, running: boolean) {
     setBusy((ids) => {
       if (ids.has(id) === running) return ids;
@@ -273,51 +286,68 @@ export function ChatScreen({ visible, onOpenSettings }: Props) {
         </p>
       )}
       {model || cloud ? (
-        <DocActions value={actions}>
-          <div className="flex min-h-0 flex-1">
-            <Sidebar
-              conversations={conversations ?? []}
-              currentId={currentId}
-              busy={busy}
-              onRename={renameConversation}
-              onExport={exportConversation}
-              onSelect={select}
-              onNew={() => open(crypto.randomUUID())}
-              onDelete={deleteConversation}
-            />
-            <div className="min-w-0 flex-1">
-              {conversations &&
-                opened.map((id) => (
-                  <div key={id} className={id === currentId ? "h-full" : "hidden"}>
-                    <Chat
-                      context={context}
-                      active={id === currentId}
-                      onBusy={(running) => setChatBusy(id, running)}
-                      initialMessages={conversations.find((c) => c.id === id)?.messages ?? []}
-                      onMessages={(messages, chatSlug) => saveMessages(id, messages, chatSlug)}
-                      leftTools={docPicker}
-                      rightTools={
-                        <Picker
-                          label="Model"
-                          value={cloud ? CLOUD : (model ?? "")}
-                          manageLabel="Other models…"
-                          onChange={selectModel}
-                          onManage={onOpenSettings}
-                        >
-                          {models.map((m) => (
-                            <SelectItem key={m.file} value={m.file}>
-                              {m.name}
-                            </SelectItem>
-                          ))}
-                          {cloudOption && <SelectItem value={CLOUD}>{cloudOption}</SelectItem>}
-                        </Picker>
-                      }
-                    />
-                  </div>
-                ))}
+        <OpenDocContext.Provider value={openDoc}>
+          <DocActions value={actions}>
+            <div className="flex min-h-0 flex-1">
+              <Sidebar
+                conversations={conversations ?? []}
+                currentId={currentId}
+                busy={busy}
+                onRename={renameConversation}
+                onExport={exportConversation}
+                onSelect={select}
+                onNew={() => open(crypto.randomUUID())}
+                onDelete={deleteConversation}
+              />
+              <div className="min-w-0 flex-1">
+                {conversations &&
+                  opened.map((id) => (
+                    <div key={id} className={id === currentId ? "h-full" : "hidden"}>
+                      <Chat
+                        context={context}
+                        active={id === currentId}
+                        onBusy={(running) => setChatBusy(id, running)}
+                        initialMessages={conversations.find((c) => c.id === id)?.messages ?? []}
+                        onMessages={(messages, chatSlug) => saveMessages(id, messages, chatSlug)}
+                        leftTools={docPicker}
+                        rightTools={
+                          <Picker
+                            label="Model"
+                            value={cloud ? CLOUD : (model ?? "")}
+                            manageLabel="Other models…"
+                            onChange={selectModel}
+                            onManage={onOpenSettings}
+                          >
+                            {models.map((m) => (
+                              <SelectItem key={m.file} value={m.file}>
+                                {m.name}
+                              </SelectItem>
+                            ))}
+                            {cloudOption && <SelectItem value={CLOUD}>{cloudOption}</SelectItem>}
+                          </Picker>
+                        }
+                      />
+                    </div>
+                  ))}
+              </div>
+              {reader && (
+                <aside
+                  key={reader.page.url}
+                  aria-label="Documentation page"
+                  className="fixed inset-0 z-20 overflow-y-auto bg-background p-4 lg:static lg:z-auto lg:w-[32rem] lg:shrink-0 lg:border-l"
+                >
+                  <DocPage
+                    slug={reader.slug}
+                    page={reader.page}
+                    backLabel="Close"
+                    onBack={() => setReader(null)}
+                    onNavigate={(path) => openDoc(reader.slug, path)}
+                  />
+                </aside>
+              )}
             </div>
-          </div>
-        </DocActions>
+          </DocActions>
+        </OpenDocContext.Provider>
       ) : (
         model === null && (
           <div className="min-h-0 flex-1 overflow-auto">

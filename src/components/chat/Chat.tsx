@@ -18,11 +18,13 @@ import {
   type ComponentProps,
   type ReactNode,
   type RefObject,
+  useContext,
   useEffect,
   useMemo,
   useRef,
 } from "react";
 import { type Components, Streamdown } from "streamdown";
+import { entryPath, OpenDocContext } from "@/components/chat/DocPage";
 import { InstallDocCard, UnknownDocNotice } from "@/components/chat/InstallDocCard";
 import { DocIcon } from "@/components/DocIcon";
 import { Button } from "@/components/ui/button";
@@ -266,6 +268,7 @@ function FollowUps() {
 }
 
 function SourcesFooter() {
+  const openDoc = useContext(OpenDocContext);
   const sources = useAuiState(
     (s) =>
       s.message.parts.find((p) => p.type === "data" && p.name === "sources") as
@@ -289,7 +292,7 @@ function SourcesFooter() {
             <button
               type="button"
               className="underline underline-offset-2 hover:text-foreground"
-              onClick={() => openUrl(page.url)}
+              onClick={() => openDoc(sources.slug, entryPath(sources.slug, page.url))}
             >
               {page.title}
             </button>

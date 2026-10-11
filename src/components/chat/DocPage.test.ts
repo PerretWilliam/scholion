@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveDocLink } from "@/components/chat/DocPage";
+import { entryPath, resolveDocLink } from "@/components/chat/DocPage";
 
 const pageUrl = "https://devdocs.io/c/string/byte/strcpy";
 
@@ -32,5 +32,14 @@ describe("resolveDocLink", () => {
       url: "https://devdocs.io/python~3.15/library/os",
     });
     expect(resolveDocLink("javascript:alert(1)", "c", pageUrl)).toBeNull();
+  });
+});
+
+describe("entryPath", () => {
+  it("is the inverse of the page URL built in Rust", () => {
+    expect(entryPath("python", "https://devdocs.io/python/howto/sorting")).toBe("howto/sorting");
+    expect(entryPath("c", "https://devdocs.io/c/string/byte/memcpy#Example")).toBe(
+      "string/byte/memcpy#Example",
+    );
   });
 });
