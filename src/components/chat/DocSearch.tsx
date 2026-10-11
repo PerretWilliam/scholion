@@ -2,16 +2,13 @@ import { Search } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { DocPage } from "@/components/chat/DocPage";
 import { Input } from "@/components/ui/input";
-import { docTitle } from "@/lib/format";
-import { type DocEntry, getDocs, getPage, type Page, type SearchHit, searchDoc } from "@/lib/ipc";
+import { type DocEntry, getPage, type Page, type SearchHit, searchDoc } from "@/lib/ipc";
 
 /** Waits for a pause in typing before querying. */
 const SEARCH_DELAY_MS = 150;
 
 /** "Search only" mode: browse doc entries directly, no model involved. */
-export function DocSearch() {
-  const [docs, setDocs] = useState<DocEntry[] | null>(null);
-  const [slug, setSlug] = useState("");
+export function DocSearch({ docs, slug }: { docs: DocEntry[] | null; slug: string }) {
   const [query, setQuery] = useState("");
   // Results remember their query so "No results" only shows once the search really returned.
   const [results, setResults] = useState<{ query: string; hits: SearchHit[] }>({
@@ -20,18 +17,11 @@ export function DocSearch() {
   });
   const [page, setPage] = useState<Page | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const docSelectId = useId();
   const searchId = useId();
 
-  useEffect(() => {
-    getDocs()
-      .then(({ installed }) => {
-        const entries = installed.map((d) => d.entry);
-        setDocs(entries);
-        setSlug((current) => current || entries[0]?.slug || "");
-      })
-      .catch((e) => setError(String(e)));
-  }, []);
+  // A page belongs to one doc: close it when the doc changes.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs on slug change only.
+  useEffect(() => setPage(null), [slug]);
 
   useEffect(() => {
     if (!slug || !query.trim()) {
@@ -75,24 +65,6 @@ export function DocSearch() {
   return (
     <div className="mx-auto max-w-3xl space-y-4 p-6">
       <div className="flex flex-wrap gap-2">
-        <label htmlFor={docSelectId} className="sr-only">
-          Documentation
-        </label>
-        <select
-          id={docSelectId}
-          className="h-9 rounded-md border bg-background px-2 text-sm"
-          value={slug}
-          onChange={(e) => {
-            setSlug(e.target.value);
-            setPage(null);
-          }}
-        >
-          {docs?.map((d) => (
-            <option key={d.slug} value={d.slug}>
-              {docTitle(d)}
-            </option>
-          ))}
-        </select>
         <div className="relative min-w-48 flex-1">
           <Search className="absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
           <label htmlFor={searchId} className="sr-only">

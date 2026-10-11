@@ -1,5 +1,6 @@
 pub mod html;
 pub mod install;
+pub mod intent;
 pub mod manifest;
 pub mod search;
 

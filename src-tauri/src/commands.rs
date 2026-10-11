@@ -9,6 +9,7 @@ use serde::Serialize;
 use tauri::State;
 use tauri::ipc::Channel;
 
+use crate::docs::intent::{self, DocIntent};
 use crate::docs::manifest::{self, CachedManifest, DocEntry};
 use crate::docs::search::{self, Page, SearchHit};
 use crate::docs::{InstalledDoc, install, installed_status};
@@ -106,6 +107,23 @@ pub async fn get_page(state: State<'_, AppState>, slug: String, path: String) ->
     install::validate_slug(&slug)?;
     let db = install::doc_path(&state.data_dir, &slug);
     blocking(move || search::get_page(&search::open(&db)?, &slug, &path)).await
+}
+
+/// Page text for the model: Markdown from the entry's anchor, cut to fit the context.
+#[tauri::command]
+pub async fn get_passage(state: State<'_, AppState>, slug: String, path: String) -> Result<String> {
+    install::validate_slug(&slug)?;
+    let db = install::doc_path(&state.data_dir, &slug);
+    blocking(move || search::passage(&search::open(&db)?, &slug, &path, search::PASSAGE_CHARS))
+        .await
+}
+
+/// The doc a question names, if any, matched against the cached manifest and installed docs.
+#[tauri::command]
+pub async fn detect_doc(state: State<'_, AppState>, question: String) -> Result<Option<DocIntent>> {
+    let manifest = manifest::load_cached(&state.data_dir)?;
+    let installed = install::list_installed(&state.data_dir)?;
+    Ok(intent::detect(&question, &manifest.docs, &installed))
 }
 
 /// Runs SQLite work off the async runtime.

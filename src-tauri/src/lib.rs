@@ -43,6 +43,8 @@ pub fn run() {
             commands::remove_doc,
             commands::search_doc,
             commands::get_page,
+            commands::get_passage,
+            commands::detect_doc,
             commands::get_settings,
             commands::set_settings,
             commands::start_llm,

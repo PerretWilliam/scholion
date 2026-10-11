@@ -1,4 +1,4 @@
-//! DevDocs page HTML to Markdown, for full-text indexing (and model passages in Phase 6).
+//! DevDocs page HTML to Markdown, for full-text indexing and model passages.
 
 use std::rc::Rc;
 

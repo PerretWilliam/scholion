@@ -73,6 +73,20 @@ export const searchDoc = (slug: string, query: string, limit = 30) =>
 
 export const getPage = (slug: string, path: string) => invoke<Page>("get_page", { slug, path });
 
+/** Page text for the model: Markdown from the entry's anchor, cut to fit the context. */
+export const getPassage = (slug: string, path: string) =>
+  invoke<string>("get_passage", { slug, path });
+
+/** The doc a question names. `question` is false for a bare request ("I want the Go docs"). */
+export type DocIntent =
+  | { kind: "installed"; name: string; slug: string; question: boolean }
+  /** Newest version first. */
+  | { kind: "available"; name: string; versions: DocEntry[]; question: boolean }
+  /** DevDocs has no doc by that name. */
+  | { kind: "unknown"; name: string; suggestions: string[] };
+
+export const detectDoc = (question: string) => invoke<DocIntent | null>("detect_doc", { question });
+
 /** Port of a llama-server running `model` (a file name in the models directory). */
 export const startLlm = (model: string) => invoke<number>("start_llm", { model });
 

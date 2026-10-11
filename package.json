@@ -23,15 +23,20 @@
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm lint:rust && pnpm test:rust"
   },
   "dependencies": {
+    "@ai-sdk/openai-compatible": "^3.0.67",
+    "@assistant-ui/react": "^0.15.26",
+    "@assistant-ui/react-ai-sdk": "^1.4.17",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-opener": "^2",
+    "ai": "^7.0.137",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.4.0",
     "dompurify": "^3.4.16",
     "lucide-react": "^1.55.0",
     "radix-ui": "^1.7.0",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "streamdown": "^2.7.0"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",

@@ -10,6 +10,9 @@ use crate::error::{AppError, Result};
 
 /// Below this Jaro-Winkler similarity, a name is not a typo of the query.
 const FUZZY_THRESHOLD: f64 = 0.88;
+/// Characters of one passage given to the model. Three passages (~800 tokens each), the prompt
+/// and the answer fit the 4096-token context set in `llm.rs`.
+pub const PASSAGE_CHARS: usize = 3000;
 
 #[derive(Debug, PartialEq, Serialize)]
 pub struct SearchHit {
@@ -171,6 +174,35 @@ pub fn get_page(conn: &Connection, slug: &str, path: &str) -> Result<Page> {
     })
 }
 
+/// Page text for the model, as Markdown of at most `max_chars` characters. Entry paths with a
+/// `#fragment` start at that anchor: many entries point into long pages (one class among many).
+pub fn passage(conn: &Connection, slug: &str, path: &str, max_chars: usize) -> Result<String> {
+    let page = get_page(conn, slug, path)?;
+    let html = match path.split_once('#') {
+        Some((_, id)) => from_anchor(&page.html, id),
+        None => &page.html,
+    };
+    Ok(truncate(&super::html::to_markdown(html)?, max_chars))
+}
+
+/// The HTML from the tag carrying `id` on. Unbalanced tags are fine for the HTML parser.
+fn from_anchor<'a>(html: &'a str, id: &str) -> &'a str {
+    html.find(&format!("id=\"{id}\""))
+        .and_then(|i| html[..i].rfind('<'))
+        .map_or(html, |start| &html[start..])
+}
+
+/// Cuts `text` to `max_chars`, at a line break when one is near the end.
+fn truncate(text: &str, max_chars: usize) -> String {
+    let text = text.trim();
+    let Some((cut, _)) = text.char_indices().nth(max_chars) else {
+        return text.to_owned();
+    };
+    let head = &text[..cut];
+    let end = head.rfind('\n').filter(|&i| i > cut / 2).unwrap_or(cut);
+    format!("{}\n[…]", head[..end].trim_end())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -252,5 +284,30 @@ mod tests {
         assert!(page.html.contains("<h1>memcpy</h1>"));
         assert_eq!(page.url, "https://devdocs.io/c/string/byte/memcpy#Example");
         assert!(get_page(&conn, "c", "nope").is_err());
+    }
+
+    #[test]
+    fn passages_are_markdown_from_the_entry_anchor() {
+        let (_dir, conn) = c_doc();
+        let text = passage(&conn, "c", "string/byte/memcpy", PASSAGE_CHARS).unwrap();
+        assert!(text.starts_with("# memcpy"), "{text}");
+        assert!(text.contains("```c\nvoid* memcpy("), "{text}");
+
+        let html = r#"<h1>str</h1><p>Intro</p><dl><dt id="str.join">join</dt><dd>Joins.</dd></dl>"#;
+        assert_eq!(
+            from_anchor(html, "str.join"),
+            r#"<dt id="str.join">join</dt><dd>Joins.</dd></dl>"#
+        );
+        assert_eq!(from_anchor(html, "missing"), html);
+    }
+
+    #[test]
+    fn truncates_at_a_line_break() {
+        assert_eq!(truncate("short", 10), "short");
+        assert_eq!(
+            truncate("line one\nline two\nline three", 20),
+            "line one\nline two\n[…]"
+        );
+        assert_eq!(truncate("ééééé", 3), "ééé\n[…]");
     }
 }
