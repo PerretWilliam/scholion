@@ -29,5 +29,13 @@
     "parser": {
       "tailwindDirectives": true
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["src-tauri/tauri.conf.json"],
+      "formatter": {
+        "enabled": false
+      }
+    }
+  ]
 }
