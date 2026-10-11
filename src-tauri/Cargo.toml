@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Offline documentation assistant powered by a local language model"
 authors = ["William Perret"]
 license = "MIT"
+repository = "https://github.com/PerretWilliam/scholion"
 edition = "2024"
 
 [lib]

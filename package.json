@@ -1,6 +1,13 @@
 {
   "name": "scholion",
   "private": true,
+  "description": "Offline documentation assistant powered by a local language model",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PerretWilliam/scholion.git"
+  },
+  "bugs": "https://github.com/PerretWilliam/scholion/issues",
   "version": "0.1.0",
   "type": "module",
   "packageManager": "pnpm@12.6.0",
