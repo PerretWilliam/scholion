@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.0](https://github.com/PerretWilliam/scholion/compare/v0.1.0...v0.2.0) (2026-10-11)
+
+
+### Features
+
+* country flags in the language picker, now in Settings ([#17](https://github.com/PerretWilliam/scholion/issues/17)) ([9576ada](https://github.com/PerretWilliam/scholion/commit/9576ada1a06d0a5b7e88723831c3039f37aff8a1))
+* interface translations in 21 languages with a language picker showing coverage ([#15](https://github.com/PerretWilliam/scholion/issues/15)) ([78f88e6](https://github.com/PerretWilliam/scholion/commit/78f88e6be7e2fbc393238e5141d1daff72ccbe36))
+
 ## [0.1.0](https://github.com/PerretWilliam/scholion/compare/v0.0.1...v0.1.0) (2026-10-11)
 
 
