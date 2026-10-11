@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import { docTitle, formatBytes, formatCheckedAt } from "@/lib/format";
+import { t, useLanguage } from "@/lib/i18n";
 import {
   checkDocUpdates,
   DOCS_CHANGED_EVENT,
@@ -26,6 +27,7 @@ import {
 const PAGE_SIZE = 8;
 
 export function DocsManager() {
+  useLanguage();
   const [overview, setOverview] = useState<DocsOverview | null>(null);
   const [settings, setLocalSettings] = useState<Settings | null>(null);
   const [progress, setProgress] = useState<Record<string, number>>({});
@@ -62,7 +64,7 @@ export function DocsManager() {
     try {
       setOverview(await checkDocUpdates());
     } catch (e) {
-      setError(`Could not check for updates: ${e}`);
+      setError(`${t("docs.errCheck")}: ${e}`);
     } finally {
       setChecking(false);
     }
@@ -75,7 +77,7 @@ export function DocsManager() {
       await installDoc(doc.slug, (percent) => setProgress((p) => ({ ...p, [doc.slug]: percent })));
       await reload();
     } catch (e) {
-      setError(`Could not install ${docTitle(doc)}: ${e}`);
+      setError(`${t("docs.errInstall", { name: docTitle(doc) })}: ${e}`);
     } finally {
       setProgress(({ [doc.slug]: _, ...rest }) => rest);
     }
@@ -87,7 +89,7 @@ export function DocsManager() {
       await removeDoc(doc.slug);
       await reload();
     } catch (e) {
-      setError(`Could not remove ${docTitle(doc)}: ${e}`);
+      setError(`${t("docs.errRemove", { name: docTitle(doc) })}: ${e}`);
     }
   }
 
@@ -98,7 +100,7 @@ export function DocsManager() {
         await removeDoc(entry.slug);
       }
     } catch (e) {
-      setError(`Could not remove all docs: ${e}`);
+      setError(`${t("docs.errRemoveAll")}: ${e}`);
     }
     await reload();
   }
@@ -109,7 +111,7 @@ export function DocsManager() {
       // Read fresh settings: the model manager may have changed the active model.
       await setSettings({ ...(await getSettings()), auto_update_docs: enabled });
     } catch (e) {
-      setError(`Could not save settings: ${e}`);
+      setError(`${t("docs.errSettings")}: ${e}`);
     }
   }
 
@@ -135,14 +137,14 @@ export function DocsManager() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 id="docs-heading" className="font-semibold">
-            Documentation
+            {t("common.documentation")}
           </h2>
           <p className="text-muted-foreground text-xs">
-            Doc list from DevDocs, last checked {formatCheckedAt(overview?.checked_at ?? 0)}.
+            {t("docs.lastChecked", { when: formatCheckedAt(overview?.checked_at ?? 0) })}
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={checkNow} disabled={checking}>
-          <RefreshCw className={checking ? "animate-spin" : undefined} /> Check now
+          <RefreshCw className={checking ? "animate-spin" : undefined} /> {t("docs.checkNow")}
         </Button>
       </div>
 
@@ -159,16 +161,17 @@ export function DocsManager() {
           disabled={!settings}
           onCheckedChange={toggleAutoUpdate}
         />
-        <Label htmlFor={autoUpdateId}>Install doc updates automatically</Label>
+        <Label htmlFor={autoUpdateId}>{t("docs.autoUpdate")}</Label>
       </div>
 
       <div className="space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="font-medium text-sm">Installed</h3>
+          <h3 className="font-medium text-sm">{t("common.installed")}</h3>
           {overview?.installed.length ? (
             <RemoveAllButton
-              what="all docs"
-              size={formatBytes(overview.installed.reduce((sum, d) => sum + d.entry.db_size, 0))}
+              confirm={t("docs.deleteAll", {
+                size: formatBytes(overview.installed.reduce((sum, d) => sum + d.entry.db_size, 0)),
+              })}
               onConfirm={removeAll}
             />
           ) : null}
@@ -180,26 +183,26 @@ export function DocsManager() {
                 <DocRow key={entry.slug} doc={entry} progress={progress[entry.slug]}>
                   {newer_version && (
                     <span className="text-muted-foreground text-xs">
-                      {entry.name} {newer_version} is available
+                      {t("docs.newer", { name: entry.name, version: newer_version })}
                     </span>
                   )}
                   {update_available && (
                     <>
-                      <Badge variant="secondary">Update available</Badge>
+                      <Badge variant="secondary">{t("docs.updateAvailable")}</Badge>
                       <Button size="sm" onClick={() => install(entry)}>
-                        Update
+                        {t("common.update")}
                       </Button>
                     </>
                   )}
                   <Button size="sm" variant="ghost" onClick={() => remove(entry)}>
-                    Remove
+                    {t("common.remove")}
                   </Button>
                 </DocRow>
               ),
             )}
           </ul>
         ) : (
-          <p className="text-muted-foreground text-sm">No docs installed yet.</p>
+          <p className="text-muted-foreground text-sm">{t("docs.none")}</p>
         )}
         <Pager
           page={installedPage}
@@ -209,11 +212,11 @@ export function DocsManager() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor={searchId}>Available</Label>
+        <Label htmlFor={searchId}>{t("docs.available")}</Label>
         <Input
           id={searchId}
           type="search"
-          placeholder="Search languages, e.g. python, js, rust"
+          placeholder={t("docs.searchPlaceholder")}
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -221,15 +224,13 @@ export function DocsManager() {
           }}
         />
         {overview && overview.available.length === 0 ? (
-          <p className="text-muted-foreground text-sm">
-            The doc list has not been downloaded yet. Connect to the internet and click Check now.
-          </p>
+          <p className="text-muted-foreground text-sm">{t("docs.listMissing")}</p>
         ) : (
           <ul className="divide-y rounded-md border">
             {page(matches, availablePage).map((doc) => (
               <DocRow key={doc.slug} doc={doc} progress={progress[doc.slug]}>
                 <Button size="sm" variant="outline" onClick={() => install(doc)}>
-                  Install
+                  {t("common.install")}
                 </Button>
               </DocRow>
             ))}
@@ -250,6 +251,7 @@ interface DocRowProps {
 }
 
 function DocRow({ doc, progress, children }: DocRowProps) {
+  useLanguage();
   const title = docTitle(doc);
   return (
     <li className="flex flex-wrap items-center gap-3 px-3 py-2">
@@ -261,7 +263,11 @@ function DocRow({ doc, progress, children }: DocRowProps) {
       {progress === undefined ? (
         <div className="flex flex-wrap items-center gap-2">{children}</div>
       ) : (
-        <Progress value={progress} className="w-32" aria-label={`Installing ${title}`} />
+        <Progress
+          value={progress}
+          className="w-32"
+          aria-label={t("common.installing", { name: title })}
+        />
       )}
     </li>
   );
@@ -283,18 +289,23 @@ interface PagerProps {
 
 /** Previous/next buttons under a list; nothing when everything fits on one page. */
 function Pager({ page, total, onChange }: PagerProps) {
+  useLanguage();
   const last = lastPage(total);
   const current = Math.min(page, last);
   if (last === 0) return null;
   return (
-    <nav aria-label="Pagination" className="flex items-center justify-end gap-2 text-xs">
+    <nav aria-label={t("docs.pagination")} className="flex items-center justify-end gap-2 text-xs">
       <span className="text-muted-foreground">
-        {current * PAGE_SIZE + 1}–{Math.min((current + 1) * PAGE_SIZE, total)} of {total}
+        {t("docs.range", {
+          from: current * PAGE_SIZE + 1,
+          to: Math.min((current + 1) * PAGE_SIZE, total),
+          total,
+        })}
       </span>
       <Button
         size="icon-sm"
         variant="outline"
-        aria-label="Previous page"
+        aria-label={t("docs.prevPage")}
         disabled={current === 0}
         onClick={() => onChange(current - 1)}
       >
@@ -303,7 +314,7 @@ function Pager({ page, total, onChange }: PagerProps) {
       <Button
         size="icon-sm"
         variant="outline"
-        aria-label="Next page"
+        aria-label={t("docs.nextPage")}
         disabled={current >= last}
         onClick={() => onChange(current + 1)}
       >

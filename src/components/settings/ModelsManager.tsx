@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { formatBytes } from "@/lib/format";
+import { t, useLanguage } from "@/lib/i18n";
 import {
   cancelModelDownload,
   downloadModel,
@@ -15,6 +16,7 @@ import {
 } from "@/lib/ipc";
 
 export function ModelsManager() {
+  useLanguage();
   const [overview, setOverview] = useState<ModelsOverview | null>(null);
   const [progress, setProgress] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +55,7 @@ export function ModelsManager() {
       );
     } catch (e) {
       if (!cancelled.current.has(model.file)) {
-        setError(`Could not download ${model.name}: ${e}`);
+        setError(`${t("models.errDownload", { name: model.name })}: ${e}`);
       }
     } finally {
       setProgress(({ [model.file]: _, ...rest }) => rest);
@@ -63,7 +65,7 @@ export function ModelsManager() {
 
   function cancel(model: ModelStatus) {
     cancelled.current.add(model.file);
-    run(() => cancelModelDownload(model.file), `Could not cancel ${model.name}`);
+    run(() => cancelModelDownload(model.file), t("models.errCancel", { name: model.name }));
   }
 
   // Downloaded models and partial downloads that are not running right now.
@@ -80,7 +82,7 @@ export function ModelsManager() {
       for (const model of removable) {
         await removeModel(model.file);
       }
-    }, "Could not remove all models");
+    }, t("models.errRemoveAll"));
   }
 
   return (
@@ -88,16 +90,13 @@ export function ModelsManager() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 id="models-heading" className="font-semibold">
-            Models
+            {t("models.title")}
           </h2>
-          <p className="text-muted-foreground text-xs">
-            The model writes answers from the docs. It runs on this computer, offline.
-          </p>
+          <p className="text-muted-foreground text-xs">{t("models.intro")}</p>
         </div>
         {removable.length > 0 && (
           <RemoveAllButton
-            what="all models"
-            size={formatBytes(removableBytes)}
+            confirm={t("models.deleteAll", { size: formatBytes(removableBytes) })}
             onConfirm={removeAll}
           />
         )}
@@ -118,8 +117,10 @@ export function ModelsManager() {
               <div className="min-w-0 flex-1">
                 <p className="flex items-center gap-2 font-medium text-sm">
                   {model.name}
-                  {model.recommended && <Badge variant="secondary">Recommended</Badge>}
-                  {active && <Badge>Active</Badge>}
+                  {model.recommended && (
+                    <Badge variant="secondary">{t("models.recommended")}</Badge>
+                  )}
+                  {active && <Badge>{t("models.active")}</Badge>}
                 </p>
                 <p className="text-muted-foreground text-xs">
                   {formatBytes(model.size)} · {model.description}
@@ -131,10 +132,10 @@ export function ModelsManager() {
                     <Progress
                       value={percent}
                       className="w-32"
-                      aria-label={`Downloading ${model.name}`}
+                      aria-label={t("common.downloading", { name: model.name })}
                     />
                   ) : (
-                    <span className="text-muted-foreground text-xs">Verifying…</span>
+                    <span className="text-muted-foreground text-xs">{t("common.verifying")}</span>
                   )}
                   <Button
                     size="sm"
@@ -142,7 +143,7 @@ export function ModelsManager() {
                     onClick={() => cancel(model)}
                     disabled={percent === 100}
                   >
-                    Cancel
+                    {t("common.cancel")}
                   </Button>
                 </div>
               ) : model.downloaded ? (
@@ -151,41 +152,50 @@ export function ModelsManager() {
                     <Button
                       size="sm"
                       onClick={() =>
-                        run(() => setActiveModel(model.file), `Could not use ${model.name}`)
+                        run(
+                          () => setActiveModel(model.file),
+                          t("models.errUse", { name: model.name }),
+                        )
                       }
                     >
-                      Use
+                      {t("models.use")}
                     </Button>
                   )}
                   <Button
                     size="sm"
                     variant="ghost"
                     onClick={() =>
-                      run(() => removeModel(model.file), `Could not remove ${model.name}`)
+                      run(
+                        () => removeModel(model.file),
+                        t("models.errRemove", { name: model.name }),
+                      )
                     }
                   >
-                    Remove
+                    {t("common.remove")}
                   </Button>
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
                   {model.partial_bytes > 0 && (
                     <span className="text-muted-foreground text-xs">
-                      {formatBytes(model.partial_bytes)} downloaded
+                      {t("models.downloaded", { size: formatBytes(model.partial_bytes) })}
                     </span>
                   )}
                   <Button size="sm" variant="outline" onClick={() => download(model)}>
-                    {model.partial_bytes > 0 ? "Resume" : "Download"}
+                    {model.partial_bytes > 0 ? t("models.resume") : t("common.download")}
                   </Button>
                   {model.partial_bytes > 0 && (
                     <Button
                       size="sm"
                       variant="ghost"
                       onClick={() =>
-                        run(() => removeModel(model.file), `Could not discard ${model.name}`)
+                        run(
+                          () => removeModel(model.file),
+                          t("models.errDiscard", { name: model.name }),
+                        )
                       }
                     >
-                      Discard
+                      {t("models.discard")}
                     </Button>
                   )}
                 </div>

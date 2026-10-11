@@ -1,30 +1,28 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { t, useLanguage } from "@/lib/i18n";
 
 interface RemoveAllButtonProps {
-  /** What is deleted, e.g. "all models"; shown in the confirmation. */
-  what: string;
-  /** Total size on disk, already formatted. */
-  size: string;
+  /** The confirmation question, e.g. "Delete all models (2.7 GB)?". */
+  confirm: string;
   onConfirm: () => void;
 }
 
 /** Destructive button that needs a second click, since webview dialogs are not available. */
-export function RemoveAllButton({ what, size, onConfirm }: RemoveAllButtonProps) {
+export function RemoveAllButton({ confirm, onConfirm }: RemoveAllButtonProps) {
+  useLanguage();
   const [confirming, setConfirming] = useState(false);
 
   if (!confirming) {
     return (
       <Button size="sm" variant="destructive" onClick={() => setConfirming(true)}>
-        Remove all
+        {t("common.removeAll")}
       </Button>
     );
   }
   return (
     <div className="flex items-center gap-2">
-      <span className="text-xs">
-        Delete {what} ({size})?
-      </span>
+      <span className="text-xs">{confirm}</span>
       <Button
         size="sm"
         variant="destructive"
@@ -33,10 +31,10 @@ export function RemoveAllButton({ what, size, onConfirm }: RemoveAllButtonProps)
           onConfirm();
         }}
       >
-        Delete
+        {t("common.delete")}
       </Button>
       <Button size="sm" variant="ghost" onClick={() => setConfirming(false)}>
-        Cancel
+        {t("common.cancel")}
       </Button>
     </div>
   );

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { type Conversation, matches } from "@/lib/history";
+import { t, useLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 interface SidebarProps {
@@ -29,6 +30,7 @@ export function Sidebar({
   onRename,
   onExport,
 }: SidebarProps) {
+  useLanguage();
   const isNew = !conversations.some((c) => c.id === currentId);
   const [query, setQuery] = useState("");
   /** Conversation being renamed, and the title typed so far. */
@@ -43,11 +45,17 @@ export function Sidebar({
 
   return (
     <aside
-      aria-label="Conversations"
+      aria-label={t("sidebar.conversations")}
       className="hidden w-64 shrink-0 flex-col gap-2 border-r p-2 md:flex"
     >
-      <Button variant="outline" size="sm" onClick={onNew} disabled={isNew} title="New chat (⌘N)">
-        <Plus /> New chat
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onNew}
+        disabled={isNew}
+        title={t("sidebar.newTitle")}
+      >
+        <Plus /> {t("sidebar.new")}
       </Button>
       <div className="relative">
         <Search
@@ -56,17 +64,17 @@ export function Sidebar({
         />
         <Input
           type="search"
-          aria-label="Search conversations"
-          placeholder="Search…"
+          aria-label={t("sidebar.search")}
+          placeholder={t("sidebar.searchPlaceholder")}
           className="h-8 pl-7 text-sm"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
       </div>
-      <nav aria-label="History" className="min-h-0 flex-1 space-y-0.5 overflow-y-auto">
+      <nav aria-label={t("sidebar.history")} className="min-h-0 flex-1 space-y-0.5 overflow-y-auto">
         {shown.length === 0 && (
           <p className="px-2 py-1 text-muted-foreground text-xs">
-            {conversations.length === 0 ? "No conversations yet." : "No conversation matches."}
+            {conversations.length === 0 ? t("sidebar.none") : t("sidebar.noMatch")}
           </p>
         )}
         {shown.map((c) => (
@@ -79,7 +87,7 @@ export function Sidebar({
           >
             {editing?.id === c.id ? (
               <Input
-                aria-label="Conversation title"
+                aria-label={t("sidebar.titleLabel")}
                 className="h-8 flex-1 text-sm"
                 value={editing.title}
                 autoFocus
@@ -103,21 +111,27 @@ export function Sidebar({
                     <Loader2
                       className="size-3.5 shrink-0 animate-spin text-muted-foreground"
                       role="img"
-                      aria-label="Answering"
+                      aria-label={t("sidebar.answering")}
                     />
                   )}
                   <span className="truncate">{c.title}</span>
                 </button>
                 <RowButton
-                  label={`Rename ${c.title}`}
+                  label={t("sidebar.rename", { title: c.title })}
                   onClick={() => setEditing({ id: c.id, title: c.title })}
                 >
                   <Pencil />
                 </RowButton>
-                <RowButton label={`Export ${c.title} as Markdown`} onClick={() => onExport(c.id)}>
+                <RowButton
+                  label={t("sidebar.export", { title: c.title })}
+                  onClick={() => onExport(c.id)}
+                >
                   <Download />
                 </RowButton>
-                <RowButton label={`Delete ${c.title}`} onClick={() => onDelete(c.id)}>
+                <RowButton
+                  label={t("sidebar.delete", { title: c.title })}
+                  onClick={() => onDelete(c.id)}
+                >
                   <X />
                 </RowButton>
               </>

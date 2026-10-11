@@ -1,15 +1,18 @@
 import { MessageSquare, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ChatScreen } from "@/components/chat/ChatScreen";
+import { LanguagePicker } from "@/components/LanguagePicker";
 import { Logo } from "@/components/Logo";
 import { SettingsScreen } from "@/components/settings/SettingsScreen";
 import { Button } from "@/components/ui/button";
 import { Welcome } from "@/components/Welcome";
+import { t, useLanguage } from "@/lib/i18n";
 import { getDocs, getModels } from "@/lib/ipc";
 
 type Screen = "welcome" | "chat" | "settings";
 
 export default function App() {
+  useLanguage();
   const [screen, setScreen] = useState<Screen>("chat");
 
   // First launch, or everything was removed: offer a model and docs.
@@ -31,21 +34,22 @@ export default function App() {
           <Logo />
           Scholion
         </h1>
-        <nav className="flex gap-1" aria-label="Main">
+        <nav className="flex items-center gap-1" aria-label={t("app.mainNav")}>
           <Button
             variant={screen === "chat" ? "secondary" : "ghost"}
             size="sm"
             onClick={() => setScreen("chat")}
           >
-            <MessageSquare /> Chat
+            <MessageSquare /> {t("app.chat")}
           </Button>
           <Button
             variant={screen === "settings" ? "secondary" : "ghost"}
             size="sm"
             onClick={() => setScreen("settings")}
           >
-            <Settings /> Settings
+            <Settings /> {t("app.settings")}
           </Button>
+          <LanguagePicker />
         </nav>
       </header>
       {/* The chat stays mounted so the conversation survives a visit to Settings. */}

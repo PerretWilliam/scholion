@@ -2,6 +2,7 @@ import { Search } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { DocPage } from "@/components/chat/DocPage";
 import { Input } from "@/components/ui/input";
+import { t, useLanguage } from "@/lib/i18n";
 import { type DocEntry, getPage, type Page, type SearchHit, searchDoc } from "@/lib/ipc";
 
 /** Waits for a pause in typing before querying. */
@@ -9,6 +10,7 @@ const SEARCH_DELAY_MS = 150;
 
 /** "Search only" mode: browse doc entries directly, no model involved. */
 export function DocSearch({ docs, slug }: { docs: DocEntry[] | null; slug: string }) {
+  useLanguage();
   const [query, setQuery] = useState("");
   // Results remember their query so "No results" only shows once the search really returned.
   const [results, setResults] = useState<{ query: string; hits: SearchHit[] }>({
@@ -50,16 +52,12 @@ export function DocSearch({ docs, slug }: { docs: DocEntry[] | null; slug: strin
       setPage(await getPage(slug, path));
       setError(null);
     } catch (e) {
-      setError(`Could not open the page: ${e}`);
+      setError(`${t("chat.errOpenPage")}: ${e}`);
     }
   }
 
   if (docs?.length === 0) {
-    return (
-      <p className="p-8 text-center text-muted-foreground text-sm">
-        No docs installed yet. Install one in Settings to start searching.
-      </p>
-    );
+    return <p className="p-8 text-center text-muted-foreground text-sm">{t("search.noDocs")}</p>;
   }
 
   return (
@@ -68,13 +66,13 @@ export function DocSearch({ docs, slug }: { docs: DocEntry[] | null; slug: strin
         <div className="relative min-w-48 flex-1">
           <Search className="absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
           <label htmlFor={searchId} className="sr-only">
-            Search the documentation
+            {t("search.label")}
           </label>
           <Input
             id={searchId}
             type="search"
             className="pl-8"
-            placeholder="Search, e.g. strcpy or copy a string"
+            placeholder={t("search.placeholder")}
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
@@ -94,7 +92,7 @@ export function DocSearch({ docs, slug }: { docs: DocEntry[] | null; slug: strin
       {page ? (
         <DocPage slug={slug} page={page} onBack={() => setPage(null)} onNavigate={openPage} />
       ) : (
-        <ul className="divide-y" aria-label="Search results">
+        <ul className="divide-y" aria-label={t("search.results")}>
           {results.hits.map((hit) => (
             <li key={`${hit.path}|${hit.name}`}>
               <button
@@ -108,7 +106,7 @@ export function DocSearch({ docs, slug }: { docs: DocEntry[] | null; slug: strin
             </li>
           ))}
           {query.trim() && results.query === query && results.hits.length === 0 && (
-            <li className="px-2 py-2 text-muted-foreground text-sm">No results.</li>
+            <li className="px-2 py-2 text-muted-foreground text-sm">{t("search.none")}</li>
           )}
         </ul>
       )}
