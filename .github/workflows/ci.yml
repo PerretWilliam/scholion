@@ -32,6 +32,8 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # tauri-build requires the bundled resources to exist, even for clippy and tests.
+      - run: pnpm fetch:llama
 
       # Installs the toolchain pinned in rust-toolchain.toml.
       - run: rustup toolchain install

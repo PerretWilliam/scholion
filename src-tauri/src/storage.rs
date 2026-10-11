@@ -12,6 +12,14 @@ pub fn docs_dir(data_dir: &Path) -> PathBuf {
     data_dir.join("docs")
 }
 
+pub fn models_dir(data_dir: &Path) -> PathBuf {
+    data_dir.join("models")
+}
+
+pub fn llm_log_path(data_dir: &Path) -> PathBuf {
+    data_dir.join("llama-server.log")
+}
+
 pub fn tmp_dir(data_dir: &Path) -> PathBuf {
     data_dir.join("tmp")
 }

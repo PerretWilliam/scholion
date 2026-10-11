@@ -71,6 +71,9 @@ export const searchDoc = (slug: string, query: string, limit = 30) =>
 
 export const getPage = (slug: string, path: string) => invoke<Page>("get_page", { slug, path });
 
+/** Port of a llama-server running `model` (a file name in the models directory). */
+export const startLlm = (model: string) => invoke<number>("start_llm", { model });
+
 export const getSettings = () => invoke<Settings>("get_settings");
 
 export const setSettings = (settings: Settings) => invoke<void>("set_settings", { settings });

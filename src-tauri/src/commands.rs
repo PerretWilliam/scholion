@@ -12,13 +12,22 @@ use crate::docs::manifest::{self, CachedManifest, DocEntry};
 use crate::docs::search::{self, Page, SearchHit};
 use crate::docs::{InstalledDoc, install, installed_status};
 use crate::error::{AppError, Result};
+use crate::llm::{self, LlmServer};
 use crate::settings::{self, Settings};
+use crate::storage;
 
 pub struct AppState {
     pub http: reqwest::Client,
     pub data_dir: PathBuf,
     /// Slugs being installed, so a doc is never installed twice at the same time.
     pub installing: Mutex<HashSet<String>>,
+    /// Folder holding the bundled `llama-server` and its libraries.
+    pub llama_dir: PathBuf,
+    /// At most one model is loaded at a time. Never held across an await, so the exit handler
+    /// can always take it and kill the process.
+    pub llm: Mutex<Option<LlmServer>>,
+    /// Serializes `start_llm`, so concurrent callers wait for the model being loaded.
+    pub llm_start: tokio::sync::Mutex<()>,
 }
 
 #[derive(Serialize)]
@@ -113,6 +122,49 @@ pub fn set_settings(state: State<'_, AppState>, settings: Settings) -> Result<()
     settings::save(&state.data_dir, &settings)
 }
 
+/// Returns the port of a `llama-server` running `model` (a file in the models directory),
+/// starting it, or restarting it with another model, when needed.
+#[tauri::command]
+pub async fn start_llm(state: State<'_, AppState>, model: String) -> Result<u16> {
+    llm::validate_model_file(&model)?;
+    let path = storage::models_dir(&state.data_dir).join(&model);
+    if !path.is_file() {
+        return Err(AppError::other(format!("Model not downloaded: {model}")));
+    }
+    let log = storage::llm_log_path(&state.data_dir);
+    let _starting = state.llm_start.lock().await;
+    let port = {
+        let mut current = lock(&state.llm);
+        if let Some(server) = current.as_mut()
+            && server.model == path
+            && server.is_running()
+        {
+            return Ok(server.port);
+        }
+        // Free the memory of the previous model before loading the next one.
+        *current = None;
+        let server = llm::spawn(&state.llama_dir, &path, &log)?;
+        let port = server.port;
+        *current = Some(server);
+        port
+    };
+    let ready = llm::wait_until_ready(port, &log, || {
+        lock(&state.llm)
+            .as_mut()
+            .is_some_and(|s| s.port == port && s.is_running())
+    })
+    .await;
+    if ready.is_err() {
+        lock(&state.llm).take();
+    }
+    ready.map(|()| port)
+}
+
+/// A poisoned lock only means another thread panicked; the data is still usable.
+fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
+    mutex.lock().unwrap_or_else(|e| e.into_inner())
+}
+
 /// Shared by the command and the background auto-update.
 pub async fn install_entry(
     state: &AppState,
@@ -139,7 +191,7 @@ struct InstallGuard<'a> {
 
 impl<'a> InstallGuard<'a> {
     fn acquire(set: &'a Mutex<HashSet<String>>, slug: &str) -> Result<Self> {
-        let mut slugs = set.lock().unwrap_or_else(|e| e.into_inner());
+        let mut slugs = lock(set);
         if !slugs.insert(slug.to_owned()) {
             return Err(AppError::other(format!(
                 "{slug} is already being installed"
@@ -154,9 +206,6 @@ impl<'a> InstallGuard<'a> {
 
 impl Drop for InstallGuard<'_> {
     fn drop(&mut self) {
-        self.set
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .remove(&self.slug);
+        lock(self.set).remove(&self.slug);
     }
 }

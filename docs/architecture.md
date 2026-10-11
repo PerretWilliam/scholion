@@ -69,10 +69,15 @@ Base URL: `https://documents.devdocs.io/<slug>/`. Append `?<mtime>` to bust cach
 ## Inference: llama.cpp (Verified)
 
 - Pinned release: **`b11552`** from `ggml-org/llama.cpp` (2026-10-10).
-- Archives contain `llama-server` **plus shared libraries** (`@loader_path` rpath on macOS).
-  A single `externalBin` sidecar is not enough. We ship the `llama-server` executable and its
-  libraries as a Tauri **resource folder** (`resources/llama/`) and spawn it from the resource dir.
-  The unpacked macOS folder is ~31 MB, and we can drop the unused CLI tools.
+- Archives contain `llama-server` **plus shared libraries** (`@loader_path` / `$ORIGIN` rpath).
+  A single `externalBin` sidecar is not enough. `pnpm fetch:llama` (`scripts/fetch-llama.mjs`)
+  downloads the asset for the host, checks its sha256, and keeps only `llama-server`, the
+  libraries under the names the loader asks for (symlinks become plain files), and the licenses,
+  in `src-tauri/resources/llama/` (gitignored). Tauri bundles that folder as the `llama/`
+  resource. Sizes: macOS 31 MB, Linux 93 MB, Windows 96 MB (the Vulkan backend is ~45 MB).
+- We ship the **Vulkan** builds on Windows and Linux. They load the CPU backends dynamically,
+  so they run on machines without a GPU too. The CPU-only assets below are kept for reference.
+- The Linux build links `libssl.so.3` and `libvulkan.so.1` (Ubuntu 22.04+).
 - Assets per platform (sha256 from the GitHub release `digest`):
 
 | Target | Asset | sha256 |
@@ -84,10 +89,17 @@ Base URL: `https://documents.devdocs.io/<slug>/`. Append `?<mtime>` to bust cach
 | Linux x64 (Vulkan) | `llama-b11552-bin-ubuntu-vulkan-x64.tar.gz` | `c7bb933f3584b73296fbadea6e0d6273ddb7907699ec59ef08d0bb59e0a8b997` |
 | Linux x64 (CPU fallback) | `llama-b11552-bin-ubuntu-x64.tar.gz` | `a45a6afda05d08028bd37998072ab602c96799bccde126835941623cb99bb727` |
 
-- Launch flags: `--host 127.0.0.1 --port <free> -m <model> -c 4096 -ngl 99 --reasoning-budget 0`.
+- Lifecycle (`src-tauri/src/llm.rs`, command `start_llm`): one server at a time, spawned on a
+  free port when a model is first needed, restarted when the model changes or the process died,
+  killed on app exit. Output goes to `app_data_dir/llama-server.log`.
+- Launch flags: `--host 127.0.0.1 --port <free> --model <path> --ctx-size 4096
+  --n-gpu-layers 99 --reasoning-budget 0 --no-webui --cors-origins <app origin>
+  --no-cors-credentials`.
   - `--reasoning-budget 0` disables "thinking" output on Qwen3.5-family models (verified).
-  - CORS defaults to `*`. Restrict it with `--cors-origins` to the Tauri origin.
-  - Readiness: poll `GET /health` until `{"status":"ok"}`.
+  - CORS defaults to `*`. llama-server echoes `--cors-origins` **verbatim** in
+    `Access-Control-Allow-Origin`, so we pass exactly one origin: `tauri://localhost`
+    (macOS, Linux), `http://tauri.localhost` (Windows), `http://localhost:1420` (debug builds).
+  - Readiness: poll `GET /health` (503 while loading, 200 when ready).
 - Default context: **4096 tokens**. That fits about 3 passages of ~800 tokens plus the prompt and
   answer, on 8 GB RAM machines.
 
@@ -139,4 +151,5 @@ clicks are intercepted: same-doc links open in the app, others in the system bro
 | `manifest.json` | Cached DevDocs manifest + stored redirect `Location` |
 | `docs/<slug>.sqlite` | `meta` (manifest entry as JSON), `entries`, `pages` (HTML), `pages_fts` (FTS5) |
 | `models/<file>.gguf` | Downloaded models |
+| `llama-server.log` | Output of the last `llama-server` run |
 | `tmp/` | In-progress downloads and installs; swapped in atomically on success |

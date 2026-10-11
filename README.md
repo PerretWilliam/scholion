@@ -18,6 +18,7 @@ Requirements: Node 24+, pnpm 12, Rust (pinned by `rust-toolchain.toml`), and the
 
 ```bash
 pnpm install
+pnpm fetch:llama   # pinned llama.cpp build for this OS, into src-tauri/resources/llama/
 pnpm tauri dev
 ```
 

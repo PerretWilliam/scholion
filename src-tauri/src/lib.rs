@@ -2,13 +2,14 @@ mod commands;
 mod docs;
 mod download;
 mod error;
+mod llm;
 mod settings;
 mod storage;
 
 use std::collections::HashSet;
 use std::sync::Mutex;
 
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter, Manager, RunEvent};
 
 use commands::AppState;
 
@@ -22,10 +23,14 @@ pub fn run() {
         .setup(|app| {
             let http = reqwest::Client::builder().user_agent(USER_AGENT).build()?;
             let data_dir = app.path().app_data_dir()?;
+            let llama_dir = app.path().resource_dir()?.join("llama");
             app.manage(AppState {
                 http,
                 data_dir,
                 installing: Mutex::new(HashSet::new()),
+                llama_dir,
+                llm: Mutex::new(None),
+                llm_start: tokio::sync::Mutex::new(()),
             });
             tauri::async_runtime::spawn(background_doc_check(app.handle().clone()));
             Ok(())
@@ -39,9 +44,17 @@ pub fn run() {
             commands::get_page,
             commands::get_settings,
             commands::set_settings,
+            commands::start_llm,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app, event| {
+            // Managed state is not dropped on exit, so stop llama-server explicitly.
+            if let RunEvent::Exit = event {
+                let state = app.state::<AppState>();
+                state.llm.lock().unwrap_or_else(|e| e.into_inner()).take();
+            }
+        });
 }
 
 /// Launch-time manifest check (at most once per 24 h) and optional auto-update.
