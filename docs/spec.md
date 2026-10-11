@@ -103,8 +103,12 @@ Verified versions, URLs and formats: see [architecture.md](architecture.md).
 
 ### 4. Answer generation
 
-- System prompt: answer only from the provided passages, in the language of the question, briefly,
-  with a code example. If the passages do not contain the answer, say so instead of inventing.
+- System prompt: answer only from the provided passages, in the language of the question, as
+  documentation: signature, what it does, how it works, example, and complexity when relevant
+  (standard knowledge, marked as such). If the passages do not contain the answer, say so instead
+  of inventing.
+- After the answer, the model proposes up to 3 follow-up questions, shown as buttons that ask the
+  question when clicked.
 - Streamed answer in the UI, via llama.cpp's local OpenAI-compatible server and the AI SDK.
 - Do not rebuild generic chat pieces (scrolling, message list, Markdown rendering, copy code):
   the libraries above handle them.

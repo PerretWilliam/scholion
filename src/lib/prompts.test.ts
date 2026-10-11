@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { SearchHit } from "@/lib/ipc";
-import { answerInstructions, answerPrompt, parseKeywords, pickPages } from "@/lib/prompts";
+import {
+  answerInstructions,
+  answerPrompt,
+  parseFollowUps,
+  parseKeywords,
+  pickPages,
+} from "@/lib/prompts";
 
 const hit = (path: string): SearchHit => ({ name: path, path, type: "", url: "" });
 
@@ -56,5 +62,18 @@ describe("prompts", () => {
     expect(prompt).toBe(
       "<passage 1: strcpy>\nCopies src.\n</passage>\n\n<passage 2: memcpy>\nCopies bytes.\n</passage>\n\nQuestion: copier une chaîne ?",
     );
+  });
+});
+
+describe("parseFollowUps", () => {
+  it("keeps up to three questions, without bullets or numbering", () => {
+    const reply =
+      "1. Comment hériter d'une classe ?\n- \"Qu'est-ce que `self` ?\"\nSure!\n* Comment définir __init__ ?\n* Une quatrième question ?";
+    expect(parseFollowUps(reply)).toEqual([
+      "Comment hériter d'une classe ?",
+      "Qu'est-ce que `self` ?",
+      "Comment définir __init__ ?",
+    ]);
+    expect(parseFollowUps("No question here.")).toEqual([]);
   });
 });

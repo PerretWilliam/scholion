@@ -130,7 +130,8 @@ All Apache-2.0, not gated, GGUF from Hugging Face. The sha256 is the LFS `oid`.
 | `ai` | 7.0.x | `streamText` + `toUIMessageStream()` against llama-server: **verified streaming end to end** |
 | `@ai-sdk/openai-compatible` | 3.0.x | `createOpenAICompatible({ baseURL: "http://127.0.0.1:<port>/v1" })` |
 | `@assistant-ui/react` / `@assistant-ui/react-ai-sdk` | 0.15.x / 1.4.x | `useChatRuntime({ transport })` accepts a custom `ChatTransport` |
-| `streamdown` | 2.7.x | Streaming Markdown. Code blocks get copy/download controls; syntax colors would need the `@streamdown/code` plugin (not installed) |
+| `streamdown` | 2.7.x | Streaming Markdown. Code blocks get copy/download controls |
+| `@streamdown/code` | 2.0.x | Syntax colors (Shiki, JavaScript regex engine: no wasm, fits the CSP). Tailwind needs its `@source` line in `index.css` |
 | `@tauri-apps/api` / CLI | 2.12.x | Tauri 3 is alpha only, so we stay on 2 |
 
 Because llama-server sends `Access-Control-Allow-Origin`, the plain webview `fetch` works.

@@ -4,6 +4,7 @@
 @plugin "@tailwindcss/typography";
 /* Streamdown styles its Markdown with Tailwind classes. */
 @source "../node_modules/streamdown/dist/*.js";
+@source "../node_modules/@streamdown/code/dist/*.js";
 
 /* Follow the OS color scheme; no manual toggle. */
 @custom-variant dark (@media (prefers-color-scheme: dark));

@@ -22,9 +22,12 @@ import {
 import {
   answerInstructions,
   answerPrompt,
+  followUpInstructions,
+  followUpPrompt,
   keywordInstructions,
   keywordMessages,
   MAX_PASSAGES,
+  parseFollowUps,
   parseKeywords,
   pickPages,
 } from "@/lib/prompts";
@@ -46,6 +49,8 @@ export interface ChatData {
   /** Progress shown until the answer starts. */
   status: { text: string };
   sources: Sources;
+  /** Clickable follow-up questions, shown under the answer. */
+  suggestions: { questions: string[] };
   /** The question names a doc that is not installed: offer to install it. */
   install: Extract<DocIntent, { kind: "available" }>;
   /** The question asks for a doc DevDocs does not have. */
@@ -184,7 +189,26 @@ async function answer(
     temperature: 0.2,
     abortSignal,
   });
-  writer.merge(result.toUIMessageStream());
+  // No finish chunk here: the follow-ups below still belong to the same message.
+  writer.merge(result.toUIMessageStream({ sendFinish: false }));
+  // A failure is already reported by the merged stream; follow-ups are optional.
+  const reply = await Promise.resolve(result.text).catch(() => "");
+  if (reply && !abortSignal?.aborted) {
+    try {
+      const { text: questions } = await generateText({
+        model,
+        instructions: followUpInstructions(title),
+        prompt: followUpPrompt(question, reply),
+        maxOutputTokens: 100,
+        temperature: 0.4,
+        abortSignal,
+      });
+      const list = parseFollowUps(questions);
+      if (list.length) writer.write({ type: "data-suggestions", data: { questions: list } });
+    } catch (e) {
+      console.warn("Could not generate follow-up questions", e);
+    }
+  }
 }
 
 /** Exact names from the model's keywords first, then full-text matches of the whole question. */

@@ -9,9 +9,10 @@ import {
   useAuiState,
 } from "@assistant-ui/react";
 import { useChatRuntime } from "@assistant-ui/react-ai-sdk";
+import { code } from "@streamdown/code";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import DOMPurify from "dompurify";
-import { ArrowUp, Copy, RotateCcw, Square } from "lucide-react";
+import { ArrowUp, Check, Copy, RotateCcw, Square } from "lucide-react";
 import { type ComponentProps, type ReactNode, type RefObject, useMemo } from "react";
 import { type Components, Streamdown } from "streamdown";
 import { InstallDocCard, UnknownDocNotice } from "@/components/chat/InstallDocCard";
@@ -105,12 +106,14 @@ function UserMessage() {
 function AssistantMessage() {
   return (
     <MessagePrimitive.Root className="space-y-3">
+      <StatusLine />
       <MessagePrimitive.Parts
         components={{
           Text: ({ text, status }) => (
             <Streamdown
               className="text-sm"
               isAnimating={status.type === "running"}
+              plugins={{ code }}
               components={markdownComponents}
             >
               {text}
@@ -118,7 +121,9 @@ function AssistantMessage() {
           ),
           data: {
             by_name: {
-              status: ({ data }) => <StatusLine text={(data as ChatData["status"]).text} />,
+              // Rendered once by StatusLine, whatever the number of status updates.
+              status: () => null,
+              suggestions: () => null,
               install: ({ data }) => <InstallDocCard data={data as ChatData["install"]} />,
               "unknown-doc": ({ data }) => (
                 <UnknownDocNotice data={data as ChatData["unknown-doc"]} />
@@ -138,7 +143,12 @@ function AssistantMessage() {
       <ActionBarPrimitive.Root hideWhenRunning className="flex gap-1">
         <ActionBarPrimitive.Copy asChild>
           <Button variant="ghost" size="icon-sm" aria-label="Copy the answer">
-            <Copy />
+            <AuiIf condition={(s) => s.message.isCopied}>
+              <Check />
+            </AuiIf>
+            <AuiIf condition={(s) => !s.message.isCopied}>
+              <Copy />
+            </AuiIf>
           </Button>
         </ActionBarPrimitive.Copy>
         <ActionBarPrimitive.Reload asChild>
@@ -147,18 +157,41 @@ function AssistantMessage() {
           </Button>
         </ActionBarPrimitive.Reload>
       </ActionBarPrimitive.Root>
+      <FollowUps />
     </MessagePrimitive.Root>
   );
 }
 
-/** Progress of the pipeline, until the answer text starts. */
-function StatusLine({ text }: { text: string }) {
-  const waiting = useAuiState(
-    (s) =>
-      s.message.status?.type === "running" &&
-      !s.message.parts.some((p) => p.type === "text" && p.text),
+/** Latest progress of the pipeline, until the answer text starts. */
+function StatusLine() {
+  const text = useAuiState((s) => {
+    if (s.message.status?.type !== "running") return null;
+    if (s.message.parts.some((p) => p.type === "text" && p.text)) return null;
+    const last = s.message.parts.filter((p) => p.type === "data" && p.name === "status").at(-1);
+    return (last as { data: ChatData["status"] } | undefined)?.data.text ?? null;
+  });
+  return text ? <p className="animate-pulse text-muted-foreground text-sm">{text}</p> : null;
+}
+
+/** Questions to ask next; a click sends the question. Only under the latest answer. */
+function FollowUps() {
+  const questions = useAuiState((s) => {
+    if (!s.message.isLast || s.message.status?.type === "running") return undefined;
+    const part = s.message.parts.find((p) => p.type === "data" && p.name === "suggestions");
+    return (part as { data: ChatData["suggestions"] } | undefined)?.data.questions;
+  });
+  if (!questions?.length) return null;
+  return (
+    <div className="flex flex-wrap gap-2">
+      {questions.map((question) => (
+        <ThreadPrimitive.Suggestion key={question} prompt={question} send asChild>
+          <Button variant="outline" size="sm" className="h-auto whitespace-normal py-1.5 text-left">
+            {question}
+          </Button>
+        </ThreadPrimitive.Suggestion>
+      ))}
+    </div>
   );
-  return waiting ? <p className="animate-pulse text-muted-foreground text-sm">{text}</p> : null;
 }
 
 function SourcesFooter() {

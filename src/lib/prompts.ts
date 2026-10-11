@@ -56,13 +56,43 @@ export function pickPages(hits: SearchHit[], max = MAX_PASSAGES): SearchHit[] {
 
 export function answerInstructions(doc: string): string {
   return [
-    `You answer programming questions using only the ${doc} documentation passages provided.`,
+    `You write documentation-style answers to programming questions, using only the ${doc} documentation passages provided.`,
     "- Answer in the language of the question.",
-    "- Be brief: a short explanation, then one code example when it helps.",
-    "- Use only facts from the passages. If they do not answer the question, say so plainly",
-    "  instead of guessing.",
+    "- Explain, do not just show code. Use these sections, each with a `###` heading, and skip a",
+    "  section when the passages say nothing about it:",
+    "  1. Signature: the exact signature or syntax, in a code block.",
+    "  2. What it does: what it is for and when to use it.",
+    "  3. How it works: parameters, return value, behavior, edge cases and errors.",
+    "  4. Example: a short, complete code example with comments.",
+    "  5. Complexity: for functions, algorithms and data structures only. Use the passages, or",
+    '     standard knowledge marked "(general knowledge)".',
+    "- Apart from the complexity, use only facts from the passages. If they do not answer the",
+    "  question, say so plainly instead of guessing.",
     "- Never write URLs or links: the sources are shown under your answer.",
   ].join("\n");
+}
+
+export const MAX_FOLLOW_UPS = 3;
+
+export function followUpInstructions(doc: string): string {
+  return [
+    `Suggest ${MAX_FOLLOW_UPS} short follow-up questions a developer could ask next about the ${doc} documentation.`,
+    "One question per line, in the language of the question. No numbering, no other text.",
+  ].join("\n");
+}
+
+/** The question and the start of the answer: enough for follow-ups, small for the context. */
+export function followUpPrompt(question: string, answer: string): string {
+  return `Question: ${question}\n\nAnswer:\n${answer.slice(0, 800)}`;
+}
+
+/** Question lines of the model's reply, without bullets or numbering. */
+export function parseFollowUps(reply: string): string[] {
+  const questions = reply
+    .split("\n")
+    .map((line) => line.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, "").replace(/^["'`]+|["'`]+$/g, ""))
+    .filter((line) => line.length >= 8 && line.length <= 120 && line.endsWith("?"));
+  return [...new Set(questions)].slice(0, MAX_FOLLOW_UPS);
 }
 
 export interface Passage {
