@@ -131,3 +131,9 @@ export const freeDiskSpace = () => invoke<number>("free_disk_space");
 export const getSettings = () => invoke<Settings>("get_settings");
 
 export const setSettings = (settings: Settings) => invoke<void>("set_settings", { settings });
+
+/** The saved conversations: opaque JSON here, typed by `lib/history.ts`. */
+export const getHistory = () => invoke<unknown[]>("get_history");
+
+export const setHistory = (conversations: unknown[]) =>
+  invoke<void>("set_history", { conversations });

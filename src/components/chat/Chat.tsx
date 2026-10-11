@@ -11,9 +11,10 @@ import {
 import { useChatRuntime } from "@assistant-ui/react-ai-sdk";
 import { code } from "@streamdown/code";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import type { ChatTransport } from "ai";
 import DOMPurify from "dompurify";
 import { ArrowUp, Check, Copy, RotateCcw, Square } from "lucide-react";
-import { type ComponentProps, type ReactNode, type RefObject, useMemo } from "react";
+import { type ComponentProps, type ReactNode, type RefObject, useMemo, useRef } from "react";
 import { type Components, Streamdown } from "streamdown";
 import { InstallDocCard, UnknownDocNotice } from "@/components/chat/InstallDocCard";
 import { DocIcon } from "@/components/DocIcon";
@@ -33,16 +34,53 @@ interface ChatProps {
   rightTools: ReactNode;
   /** Messages of a saved conversation; read once, so remount (`key`) to switch conversations. */
   initialMessages: ChatMessage[];
-  /** Called with the whole conversation after each answer, also when it was stopped. */
-  onMessages: (messages: ChatMessage[]) => void;
+  /** False while another conversation is shown: this one keeps answering in the background. */
+  active: boolean;
+  /**
+   * Called with the whole conversation and the doc it uses, when a question is sent and after
+   * each answer (also a stopped one).
+   */
+  onMessages: (messages: ChatMessage[], slug: string) => void;
 }
 
-export function Chat({ context, leftTools, rightTools, initialMessages, onMessages }: ChatProps) {
-  const transport = useMemo(() => createChatTransport(() => context.current), [context]);
+export function Chat({
+  context,
+  leftTools,
+  rightTools,
+  initialMessages,
+  active,
+  onMessages,
+}: ChatProps) {
+  // Refs, because the runtime keeps the callbacks it was created with.
+  const save = useRef(onMessages);
+  save.current = onMessages;
+  const isActive = useRef(active);
+  isActive.current = active;
+  /** Doc of this conversation: the picker's at each question, or the one the question names. */
+  const slug = useRef(context.current.slug);
+
+  const transport = useMemo<ChatTransport<ChatMessage>>(() => {
+    const base = createChatTransport(() => ({
+      ...context.current,
+      // A background conversation must not move the picker of the one on screen.
+      selectDoc: (name) => {
+        slug.current = name;
+        if (isActive.current) context.current.selectDoc(name);
+      },
+    }));
+    return {
+      ...base,
+      sendMessages: (options) => {
+        slug.current = context.current.slug;
+        save.current(options.messages, slug.current);
+        return base.sendMessages(options);
+      },
+    };
+  }, [context]);
   const runtime = useChatRuntime<ChatMessage>({
     transport,
     messages: initialMessages,
-    onFinish: ({ messages }) => onMessages(messages),
+    onFinish: ({ messages }) => save.current(messages, slug.current),
   });
   return (
     <AssistantRuntimeProvider runtime={runtime}>

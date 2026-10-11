@@ -32,6 +32,10 @@ pub fn settings_path(data_dir: &Path) -> PathBuf {
     data_dir.join("settings.json")
 }
 
+pub fn history_path(data_dir: &Path) -> PathBuf {
+    data_dir.join("history.json")
+}
+
 /// Reads a JSON file. A missing file is `Ok(None)`; a corrupt one is an error.
 pub fn read_json<T: DeserializeOwned>(path: &Path) -> Result<Option<T>> {
     match fs::read(path) {

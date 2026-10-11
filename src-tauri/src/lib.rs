@@ -49,6 +49,8 @@ pub fn run() {
             commands::detect_doc,
             commands::get_settings,
             commands::set_settings,
+            commands::get_history,
+            commands::set_history,
             commands::free_disk_space,
             commands::start_llm,
             commands::get_models,

@@ -70,28 +70,54 @@ export function ChatScreen({ visible, onOpenSettings }: Props) {
     }
   }
 
-  const [conversations, setConversations] = useState(loadConversations);
-  const conversationsRef = useRef(conversations);
+  /** Saved conversations; null until the history file is read. */
+  const [conversations, setConversations] = useState<Conversation[] | null>(null);
+  const conversationsRef = useRef<Conversation[]>([]);
   const [currentId, setCurrentId] = useState<string>(() => crypto.randomUUID());
+  /**
+   * Conversations shown so far. They all stay mounted, hidden when not current, so a running
+   * answer is not interrupted by a switch.
+   */
+  const [opened, setOpened] = useState<string[]>([currentId]);
+
+  useEffect(() => {
+    loadConversations()
+      .then((list) => {
+        conversationsRef.current = list;
+        setConversations(list);
+      })
+      .catch((e) => {
+        setError(`Could not read the history: ${e}`);
+        setConversations([]);
+      });
+  }, []);
 
   function persist(next: Conversation[]) {
     conversationsRef.current = next;
     setConversations(next);
-    try {
-      saveConversations(next);
-    } catch (e) {
-      setError(`Could not save the history: ${e}`);
-    }
+    saveConversations(next).catch((e) => setError(`Could not save the history: ${e}`));
   }
 
-  /** `id` is fixed per mounted chat (it is the chat's `key`), so this never saves to the wrong one. */
-  function saveMessages(id: string, messages: ChatMessage[]) {
+  function open(id: string) {
+    setCurrentId(id);
+    setOpened((ids) => (ids.includes(id) ? ids : [...ids, id]));
+  }
+
+  function select(id: string) {
+    const slugOfChat = conversationsRef.current.find((c) => c.id === id)?.slug;
+    if (slugOfChat && docs?.some((d) => d.slug === slugOfChat)) setSlug(slugOfChat);
+    open(id);
+  }
+
+  /** `id` is fixed per mounted chat, so this never saves to the wrong conversation. */
+  function saveMessages(id: string, messages: ChatMessage[], chatSlug: string) {
     if (messages.length === 0) return;
     persist(
       upsert(conversationsRef.current, {
         id,
         title: titleOf(messages),
         updatedAt: Date.now(),
+        slug: chatSlug,
         messages,
       }),
     );
@@ -99,7 +125,15 @@ export function ChatScreen({ visible, onOpenSettings }: Props) {
 
   function deleteConversation(id: string) {
     persist(conversationsRef.current.filter((c) => c.id !== id));
-    if (id === currentId) setCurrentId(crypto.randomUUID());
+    setOpened((ids) => ids.filter((x) => x !== id));
+    if (id === currentId) open(crypto.randomUUID());
+  }
+
+  function clearConversations() {
+    persist([]);
+    const id = crypto.randomUUID();
+    setOpened([id]);
+    setCurrentId(id);
   }
 
   const context = useRef<ChatContext>({ slug, model: model ?? null, selectDoc: setSlug });
@@ -135,39 +169,41 @@ export function ChatScreen({ visible, onOpenSettings }: Props) {
         <DocActions value={actions}>
           <div className="flex min-h-0 flex-1">
             <Sidebar
-              conversations={conversations}
+              conversations={conversations ?? []}
               currentId={currentId}
-              onSelect={setCurrentId}
-              onNew={() => setCurrentId(crypto.randomUUID())}
+              onSelect={select}
+              onNew={() => open(crypto.randomUUID())}
               onDelete={deleteConversation}
-              onClear={() => {
-                persist([]);
-                setCurrentId(crypto.randomUUID());
-              }}
+              onClear={clearConversations}
             />
             <div className="min-w-0 flex-1">
-              <Chat
-                key={currentId}
-                context={context}
-                initialMessages={conversations.find((c) => c.id === currentId)?.messages ?? []}
-                onMessages={(messages) => saveMessages(currentId, messages)}
-                leftTools={docPicker}
-                rightTools={
-                  <Picker
-                    label="Model"
-                    value={model}
-                    manageLabel="Other models…"
-                    onChange={selectModel}
-                    onManage={onOpenSettings}
-                  >
-                    {models.map((m) => (
-                      <SelectItem key={m.file} value={m.file}>
-                        {m.name}
-                      </SelectItem>
-                    ))}
-                  </Picker>
-                }
-              />
+              {conversations &&
+                opened.map((id) => (
+                  <div key={id} className={id === currentId ? "h-full" : "hidden"}>
+                    <Chat
+                      context={context}
+                      active={id === currentId}
+                      initialMessages={conversations.find((c) => c.id === id)?.messages ?? []}
+                      onMessages={(messages, chatSlug) => saveMessages(id, messages, chatSlug)}
+                      leftTools={docPicker}
+                      rightTools={
+                        <Picker
+                          label="Model"
+                          value={model}
+                          manageLabel="Other models…"
+                          onChange={selectModel}
+                          onManage={onOpenSettings}
+                        >
+                          {models.map((m) => (
+                            <SelectItem key={m.file} value={m.file}>
+                              {m.name}
+                            </SelectItem>
+                          ))}
+                        </Picker>
+                      }
+                    />
+                  </div>
+                ))}
             </div>
           </div>
         </DocActions>

@@ -16,7 +16,7 @@ Everything marked **Verified** was checked against the live services on 2026-10-
 │ docs/ (manifest, install, search, intent)  download.rs  settings.rs    │
 │ llm.rs ── spawns ──► llama-server (bundled resource, random port)      │
 └────────────────────────────────────────────────────────────────────────┘
-        app_data_dir/: settings.json, manifest.json, docs/<slug>.sqlite, models/*.gguf, tmp/
+        app_data_dir/: settings.json, history.json, manifest.json, docs/<slug>.sqlite, models/*.gguf, tmp/
 ```
 
 - All network downloads (manifest, docs, models) run in Rust. The webview only talks to the local
@@ -228,6 +228,7 @@ the chat, which can search docs without a model.
 | Path | Content |
 |---|---|
 | `settings.json` | Active model, doc auto-update flag |
+| `history.json` | Conversations (id, title, doc slug, messages), written by `set_history`; opaque to Rust |
 | `manifest.json` | Cached DevDocs manifest + stored redirect `Location` |
 | `docs/<slug>.sqlite` | `meta` (manifest entry as JSON), `entries`, `pages` (HTML), `pages_fts` (FTS5) |
 | `models/<file>.gguf` | Downloaded models |

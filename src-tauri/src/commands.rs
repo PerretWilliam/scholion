@@ -143,6 +143,23 @@ pub fn set_settings(state: State<'_, AppState>, settings: Settings) -> Result<()
     settings::save(&state.data_dir, &settings)
 }
 
+/// Conversations are opaque JSON for Rust: the frontend owns their shape.
+#[tauri::command]
+pub async fn get_history(state: State<'_, AppState>) -> Result<Vec<serde_json::Value>> {
+    let path = storage::history_path(&state.data_dir);
+    blocking(move || Ok(storage::read_json(&path)?.unwrap_or_default())).await
+}
+
+/// Replaces the whole history. The frontend sends its writes one at a time.
+#[tauri::command]
+pub async fn set_history(
+    state: State<'_, AppState>,
+    conversations: Vec<serde_json::Value>,
+) -> Result<()> {
+    let path = storage::history_path(&state.data_dir);
+    blocking(move || storage::write_json_atomic(&path, &conversations)).await
+}
+
 /// Bytes free for this user on the disk holding the app data (docs and models).
 #[tauri::command]
 pub fn free_disk_space(state: State<'_, AppState>) -> Result<u64> {
