@@ -83,6 +83,10 @@ export function matchOffsets(text: string, query: string): number[] {
 
 const MAX_MATCHES = 1000;
 
+/** An element of the displayed page by id: the app has ids of its own. */
+const inPage = (root: HTMLElement | null, id: string) =>
+  root?.querySelector<HTMLElement>(`#${CSS.escape(id)}`);
+
 /** One range per match inside a single text node: a match split by a tag is not found. */
 function findRanges(root: HTMLElement, query: string): Range[] {
   const ranges: Range[] = [];
@@ -157,6 +161,8 @@ export function DocPage({
   /** Text search in the page: null while the bar is closed. */
   const [find, setFind] = useState<{ query: string; current: number } | null>(null);
   const [matches, setMatches] = useState(0);
+  /** Bumped each time the ranges are recomputed, even when their number stays the same. */
+  const [generation, setGeneration] = useState(0);
   const ranges = useRef<Range[]>([]);
   /** Bumped when highlighted code replaces text nodes, which invalidates the ranges. */
   const [highlighted, setHighlighted] = useState(0);
@@ -167,7 +173,7 @@ export function DocPage({
   useEffect(() => {
     let stale = false;
     const id = decodeURIComponent(new URL(page.url).hash.slice(1));
-    const show = () => id && document.getElementById(id)?.scrollIntoView();
+    const show = () => id && inPage(body.current, id)?.scrollIntoView();
     show();
     if (body.current)
       highlightCode(body.current, () => stale).then(() => {
@@ -190,18 +196,19 @@ export function DocPage({
     }
     ranges.current = findRanges(body.current, query);
     setMatches(ranges.current.length);
+    setGeneration((g) => g + 1);
     CSS.highlights.set("find", new Highlight(...ranges.current));
     return clearFind;
   }, [query, html, highlighted]);
 
   const current = find?.current ?? 0;
-  // biome-ignore lint/correctness/useExhaustiveDependencies: `matches` changes the ranges.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `generation` marks new ranges.
   useEffect(() => {
     const range = ranges.current[current];
     if (!canFind || !range) return;
     CSS.highlights.set("find-current", new Highlight(range));
     range.startContainer.parentElement?.scrollIntoView({ block: "center" });
-  }, [current, matches]);
+  }, [current, generation]);
 
   // ⌘/Ctrl+F opens the find bar instead of the webview's own, which does not exist.
   useEffect(() => {
@@ -231,7 +238,7 @@ export function DocPage({
     event.preventDefault();
     const link = resolveDocLink(href, slug, page.url);
     if (link?.kind === "anchor") {
-      document.getElementById(link.id)?.scrollIntoView();
+      inPage(body.current, link.id)?.scrollIntoView();
     } else if (link?.kind === "page") {
       onNavigate(link.path);
     } else if (link?.kind === "external") {
