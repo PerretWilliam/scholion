@@ -1,6 +1,7 @@
 import { listen } from "@tauri-apps/api/event";
 import { RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import { DocIcon } from "@/components/DocIcon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -223,6 +224,7 @@ function DocRow({ doc, progress, children }: DocRowProps) {
   const title = docTitle(doc);
   return (
     <li className="flex flex-wrap items-center gap-3 px-3 py-2">
+      <DocIcon slug={doc.slug} name={doc.name} className="size-5" />
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium text-sm">{title}</p>
         <p className="text-muted-foreground text-xs">{formatBytes(doc.db_size)}</p>

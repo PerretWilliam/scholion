@@ -11,10 +11,11 @@ import {
 import { useChatRuntime } from "@assistant-ui/react-ai-sdk";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import DOMPurify from "dompurify";
-import { Copy, RotateCcw, Send, Square } from "lucide-react";
-import { type ComponentProps, type RefObject, useMemo } from "react";
+import { ArrowUp, Copy, RotateCcw, Square } from "lucide-react";
+import { type ComponentProps, type ReactNode, type RefObject, useMemo } from "react";
 import { type Components, Streamdown } from "streamdown";
 import { InstallDocCard, UnknownDocNotice } from "@/components/chat/InstallDocCard";
+import { DocIcon } from "@/components/DocIcon";
 import { Button } from "@/components/ui/button";
 import {
   type ChatContext,
@@ -24,7 +25,14 @@ import {
   type Sources,
 } from "@/lib/chat-transport";
 
-export function Chat({ context }: { context: RefObject<ChatContext> }) {
+interface ChatProps {
+  context: RefObject<ChatContext>;
+  /** Shown under the question field, on the left and on the right of the send button. */
+  leftTools: ReactNode;
+  rightTools: ReactNode;
+}
+
+export function Chat({ context, leftTools, rightTools }: ChatProps) {
   const transport = useMemo(() => createChatTransport(() => context.current), [context]);
   const runtime = useChatRuntime<ChatMessage>({ transport });
   return (
@@ -43,35 +51,43 @@ export function Chat({ context }: { context: RefObject<ChatContext> }) {
             </ThreadPrimitive.Messages>
           </div>
         </ThreadPrimitive.Viewport>
-        <Composer />
+        <Composer leftTools={leftTools} rightTools={rightTools} />
       </ThreadPrimitive.Root>
     </AssistantRuntimeProvider>
   );
 }
 
-function Composer() {
+function Composer({ leftTools, rightTools }: Omit<ChatProps, "context">) {
   return (
-    <ComposerPrimitive.Root className="mx-auto flex w-full max-w-3xl items-end gap-2 px-6 pb-6">
-      <ComposerPrimitive.Input
-        aria-label="Question"
-        placeholder="Ask about the docs…"
-        className="max-h-40 min-h-9 flex-1 resize-none rounded-md border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        autoFocus
-      />
-      <AuiIf condition={(s) => !s.thread.isRunning}>
-        <ComposerPrimitive.Send asChild>
-          <Button aria-label="Send">
-            <Send />
-          </Button>
-        </ComposerPrimitive.Send>
-      </AuiIf>
-      <AuiIf condition={(s) => s.thread.isRunning}>
-        <ComposerPrimitive.Cancel asChild>
-          <Button variant="outline" aria-label="Stop">
-            <Square />
-          </Button>
-        </ComposerPrimitive.Cancel>
-      </AuiIf>
+    <ComposerPrimitive.Root className="mx-auto w-full max-w-3xl px-6 pb-6">
+      <div className="rounded-xl border bg-background shadow-sm focus-within:ring-2 focus-within:ring-ring/50">
+        <ComposerPrimitive.Input
+          aria-label="Question"
+          placeholder="Ask about the docs…"
+          className="block max-h-40 min-h-12 w-full resize-none bg-transparent px-4 pt-3 text-sm outline-none"
+          autoFocus
+        />
+        <div className="flex items-center gap-1 p-2">
+          {leftTools}
+          <div className="ml-auto flex items-center gap-1">
+            {rightTools}
+            <AuiIf condition={(s) => !s.thread.isRunning}>
+              <ComposerPrimitive.Send asChild>
+                <Button size="icon-sm" aria-label="Send">
+                  <ArrowUp />
+                </Button>
+              </ComposerPrimitive.Send>
+            </AuiIf>
+            <AuiIf condition={(s) => s.thread.isRunning}>
+              <ComposerPrimitive.Cancel asChild>
+                <Button size="icon-sm" variant="outline" aria-label="Stop">
+                  <Square />
+                </Button>
+              </ComposerPrimitive.Cancel>
+            </AuiIf>
+          </div>
+        </div>
+      </div>
     </ComposerPrimitive.Root>
   );
 }
@@ -160,7 +176,8 @@ function SourcesFooter() {
   if (!sources) return null;
   return (
     <footer className="space-y-1 border-t pt-2 text-muted-foreground text-xs">
-      <p>
+      <p className="flex flex-wrap items-center gap-x-1">
+        <DocIcon slug={sources.slug} name={sources.name} className="size-3.5" />
         Sources ({sources.doc}):{" "}
         {sources.pages.map((page, i) => (
           <span key={page.url}>

@@ -112,11 +112,12 @@ Verified versions, URLs and formats: see [architecture.md](architecture.md).
 
 ### 5. Interface
 
-- Main screen: language picker, question field, answer area, sources.
+- Main screen: answers with their sources, then the question field. Under it, like in Claude: the
+  doc picker on the left (with each doc's logo), the model picker on the right.
 - Settings screen: doc manager and model manager.
 - First launch: offer to install a model and one or two docs, showing disk space.
-- A "search only" mode (no model) that shows doc entries directly. Useful before installing a model
-  or on a modest machine.
+- Without a model, the main screen falls back to searching doc entries directly ("search only"),
+  with a link to download a model. There is no mode switch: asking is the point of the app.
 
 ## Milestones
 

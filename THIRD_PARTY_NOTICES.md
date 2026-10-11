@@ -40,6 +40,12 @@ The app is compiled from open-source Rust crates and npm packages, under MIT, Ap
 similar permissive licenses. Their notices ship with their sources: see `src-tauri/Cargo.lock` and
 `pnpm-lock.yaml` for the exact versions.
 
+### DevDocs icons
+
+The doc logos in `src/assets/doc-icons/` come from [DevDocs](https://github.com/freeCodeCamp/devdocs)
+(Mozilla Public License 2.0, © Thibaut Courouble and other contributors). Each logo is a trademark
+of its owner; the source of each is listed in the DevDocs repository.
+
 ## Downloaded at the user's request
 
 ### Language models

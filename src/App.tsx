@@ -46,7 +46,7 @@ export default function App() {
       </header>
       {/* The chat stays mounted so the conversation survives a visit to Settings. */}
       <main className="min-h-0 flex-1" hidden={screen !== "chat"}>
-        <ChatScreen visible={screen === "chat"} />
+        <ChatScreen visible={screen === "chat"} onOpenSettings={() => setScreen("settings")} />
       </main>
       {screen === "welcome" && (
         <main className="min-h-0 flex-1 overflow-auto">

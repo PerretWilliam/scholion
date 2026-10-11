@@ -1,5 +1,6 @@
 import { useAui } from "@assistant-ui/react";
 import { createContext, useContext, useId, useState } from "react";
+import { DocIcon } from "@/components/DocIcon";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import type { ChatData } from "@/lib/chat-transport";
@@ -50,8 +51,11 @@ export function InstallDocCard({ data }: { data: ChatData["install"] }) {
 
   return (
     <div className="space-y-3 rounded-md border p-3 text-sm">
-      <p>
-        The <strong>{data.name}</strong> documentation is not installed yet.
+      <p className="flex items-center gap-2">
+        {version && <DocIcon slug={version.slug} name={data.name} />}
+        <span>
+          The <strong>{data.name}</strong> documentation is not installed yet.
+        </span>
       </p>
       <div className="flex flex-wrap items-center gap-2">
         {data.versions.length > 1 && (

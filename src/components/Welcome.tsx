@@ -1,6 +1,7 @@
 import { listen } from "@tauri-apps/api/event";
 import { Check } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { DocIcon } from "@/components/DocIcon";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { docTitle, formatBytes } from "@/lib/format";
@@ -132,6 +133,7 @@ export function Welcome({ onDone }: { onDone: () => void }) {
             {docs.map((doc) => (
               <Item
                 key={doc.slug}
+                icon={<DocIcon slug={doc.slug} name={doc.name} className="size-5" />}
                 title={docTitle(doc)}
                 detail={formatBytes(doc.db_size)}
                 done={installed.has(doc.slug)}
@@ -163,6 +165,7 @@ export function Welcome({ onDone }: { onDone: () => void }) {
 }
 
 interface ItemProps {
+  icon?: ReactNode;
   title: string;
   detail: string;
   done: boolean;
@@ -173,9 +176,10 @@ interface ItemProps {
   onDownload: () => void;
 }
 
-function Item({ title, detail, done, progress, fits, onDownload }: ItemProps) {
+function Item({ icon, title, detail, done, progress, fits, onDownload }: ItemProps) {
   return (
     <li className="flex flex-wrap items-center gap-3 px-3 py-2">
+      {icon}
       <div className="min-w-0 flex-1">
         <p className="font-medium text-sm">{title}</p>
         <p className="text-muted-foreground text-xs">

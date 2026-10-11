@@ -112,7 +112,7 @@ All Apache-2.0, not gated, GGUF from Hugging Face. The sha256 is the LFS `oid`.
 | Default (fast) | `unsloth/Qwen3.5-4B-GGUF` / `Qwen3.5-4B-Q4_K_M.gguf` | 2.74 GB | `00fe7986ff5f6b463e62455821146049db6f9313603938a70800d1fb69ef11a4` |
 | Accurate | `unsloth/Qwen3.5-9B-GGUF` / `Qwen3.5-9B-Q4_K_M.gguf` | 5.68 GB | `03b74727a860a56338e042c4420bb3f04b2fec5734175f4cb9fa853daf52b7e8` |
 | Alternative | `google/gemma-4-E4B-it-qat-q4_0-gguf` / `gemma-4-E4B_q4_0-it.gguf` | 5.15 GB | `676c35070db6dbe52f93e9c864ee0fba4eddea94b9c875d9cb10daff453fbaee` |
-| Tiny (low-end machines, dev and tests) | `unsloth/Qwen3.5-0.8B-GGUF` / `Qwen3.5-0.8B-Q4_K_M.gguf` | 0.53 GB | `bd258782e35f7f458f8aced1adc053e6e92e89bc735ba3be89d38a06121dc517` |
+| Tests only (not offered: loops and echoes the question) | `unsloth/Qwen3.5-0.8B-GGUF` / `Qwen3.5-0.8B-Q4_K_M.gguf` | 0.53 GB | `bd258782e35f7f458f8aced1adc053e6e92e89bc735ba3be89d38a06121dc517` |
 
 - The catalog is hard-coded in `src-tauri/src/models.rs` (exact byte sizes from `x-linked-size`).
 - Download URL pattern: `https://huggingface.co/<repo>/resolve/main/<file>`. It answers 302 to a
@@ -181,7 +181,19 @@ Measured with Qwen3.5 4B on an Apple Silicon Mac: about 5 s from question to fin
 the model is loaded. When the passages do not cover the question, it says so instead of guessing.
 Qwen's suggested `presence_penalty 1.5` made answers loop, so it is not set.
 
-Without a model, the chat screen offers only "Search only".
+Without a model, the chat screen falls back to "search only" (`DocSearch`): doc entries, opened
+in the app, no model involved.
+
+The doc picker (left) and model picker (right) sit under the question field. Each ends with an
+item that opens Settings.
+
+## Doc icons (`src/assets/doc-icons/`, `src/components/DocIcon.tsx`)
+
+DevDocs' own 32×32 icons (`public/icons/docs/<name>/16@2x.png` in `freeCodeCamp/devdocs` at
+commit `9e13e6369553ec8e1bba3d6be525417cbf016be0`), one per slug without its version, bundled so
+they work offline (Vite inlines them, ~440 KB). Two docs use an icon with another name
+(`ALIASES`); the 6 docs without one get their initial on a colored tile. In dark mode, logos sit
+on a light tile, as many are dark.
 
 ## First launch (`src/components/Welcome.tsx`)
 

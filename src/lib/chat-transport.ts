@@ -31,7 +31,10 @@ import {
 
 /** Shown under an answer: built from the manifest and entry paths, never by the model. */
 export interface Sources {
+  /** Doc title, with its version. */
   doc: string;
+  slug: string;
+  name: string;
   /** HTML from DevDocs: sanitize before rendering. */
   attribution: string;
   pages: { title: string; url: string }[];
@@ -165,6 +168,8 @@ async function answer(
     type: "data-sources",
     data: {
       doc: title,
+      slug: doc.slug,
+      name: doc.name,
       attribution: doc.attribution,
       pages: pages.map((p) => ({ title: p.name, url: p.url })),
     },

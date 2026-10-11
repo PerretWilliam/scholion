@@ -53,15 +53,6 @@ pub const CATALOG: &[CatalogModel] = &[
         sha256: "676c35070db6dbe52f93e9c864ee0fba4eddea94b9c875d9cb10daff453fbaee",
         recommended: false,
     },
-    CatalogModel {
-        file: "Qwen3.5-0.8B-Q4_K_M.gguf",
-        name: "Qwen3.5 0.8B",
-        description: "Tiny and very fast, but often wrong. For low-end machines.",
-        repo: "unsloth/Qwen3.5-0.8B-GGUF",
-        size: 532_517_120,
-        sha256: "bd258782e35f7f458f8aced1adc053e6e92e89bc735ba3be89d38a06121dc517",
-        recommended: false,
-    },
 ];
 
 pub fn find(file: &str) -> Result<&'static CatalogModel> {
@@ -134,13 +125,24 @@ mod tests {
         assert_eq!(CATALOG.iter().filter(|m| m.recommended).count(), 1);
     }
 
-    /// Downloads the smallest model (0.5 GB) from Hugging Face, cancelling once to test resume.
+    /// Not in the catalog (its answers are poor), but small: 0.5 GB.
+    const TINY: CatalogModel = CatalogModel {
+        file: "Qwen3.5-0.8B-Q4_K_M.gguf",
+        name: "Qwen3.5 0.8B",
+        description: "",
+        repo: "unsloth/Qwen3.5-0.8B-GGUF",
+        size: 532_517_120,
+        sha256: "bd258782e35f7f458f8aced1adc053e6e92e89bc735ba3be89d38a06121dc517",
+        recommended: false,
+    };
+
+    /// Downloads a small model from Hugging Face, cancelling once to test resume.
     #[tokio::test]
     #[ignore]
     async fn live_download_cancel_resume() {
         let http = reqwest::Client::new();
         let dir = tempfile::tempdir().unwrap();
-        let model = find("Qwen3.5-0.8B-Q4_K_M.gguf").unwrap();
+        let model = &TINY;
         let cancel = AtomicBool::new(false);
         let cancelled = download(&http, dir.path(), model, &cancel, |bytes| {
             if bytes > 50_000_000 {
