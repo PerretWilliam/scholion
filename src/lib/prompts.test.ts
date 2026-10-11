@@ -42,8 +42,8 @@ describe("parseKeywords", () => {
 
 describe("pickPages", () => {
   it("keeps the first hit of each page, up to the limit", () => {
-    const hits = ["a#x", "a#y", "b", "c", "d"].map(hit);
-    expect(pickPages(hits).map((h) => h.path)).toEqual(["a#x", "b", "c"]);
+    const hits = ["a#x", "a#y", "b", "c", "d", "e"].map(hit);
+    expect(pickPages(hits).map((h) => h.path)).toEqual(["a#x", "b", "c", "d"]);
     expect(pickPages(hits, 1).map((h) => h.path)).toEqual(["a#x"]);
   });
 });

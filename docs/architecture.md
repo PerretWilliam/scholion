@@ -92,7 +92,7 @@ Base URL: `https://documents.devdocs.io/<slug>/`. Append `?<mtime>` to bust cach
 - Lifecycle (`src-tauri/src/llm.rs`, command `start_llm`): one server at a time, spawned on a
   free port when a model is first needed, restarted when the model changes or the process died,
   killed on app exit. Output goes to `app_data_dir/llama-server.log`.
-- Launch flags: `--host 127.0.0.1 --port <free> --model <path> --ctx-size 4096
+- Launch flags: `--host 127.0.0.1 --port <free> --model <path> --ctx-size 8192
   --n-gpu-layers 99 --reasoning-budget 0 --no-webui --cors-origins <app origin>
   --no-cors-credentials`.
   - `--reasoning-budget 0` disables "thinking" output on Qwen3.5-family models (verified).
@@ -100,8 +100,8 @@ Base URL: `https://documents.devdocs.io/<slug>/`. Append `?<mtime>` to bust cach
     `Access-Control-Allow-Origin`, so we pass exactly one origin: `tauri://localhost`
     (macOS, Linux), `http://tauri.localhost` (Windows), `http://localhost:1420` (debug builds).
   - Readiness: poll `GET /health` (503 while loading, 200 when ready).
-- Default context: **4096 tokens**. That fits about 3 passages of ~800 tokens plus the prompt and
-  answer, on 8 GB RAM machines.
+- Default context: **8192 tokens**. That fits 4 passages of ~1100 tokens plus the prompt and a
+  1536-token answer. The larger KV cache costs roughly 0.5-1 GB of extra RAM for a 4B model.
 
 ## Models (Verified)
 
@@ -170,10 +170,10 @@ For each question, in the webview:
    with English API names for non-English questions (measured). A reply that echoes the question
    is dropped (the 0.8B model does this).
 3. **Pages**: each term is searched by name (2 hits), then the question plus terms in full text.
-   The first 3 distinct pages are kept.
+   The first 4 distinct pages are kept.
 4. **Passages** (`get_passage`): page HTML from the entry's `#anchor` on, converted to Markdown and
-   cut at 3000 characters (`PASSAGE_CHARS`). Three passages, the prompt and a 1024-token answer
-   fit the 4096-token context.
+   cut at 4000 characters (`PASSAGE_CHARS`). Four passages, the prompt and a 1536-token answer
+   fit the 8192-token context.
 5. **Answer**: `streamText` at `temperature 0.2`, single turn (earlier messages are not sent: they
    would crowd out the passages). Sources (titles, `devdocs.io` URLs from the index, doc name,
    version, attribution) travel as a `data-sources` part, never through the model.

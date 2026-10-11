@@ -2,7 +2,7 @@
 import type { SearchHit } from "@/lib/ipc";
 
 /** Pages given to the model per answer. Their size is capped in Rust (`PASSAGE_CHARS`). */
-export const MAX_PASSAGES = 3;
+export const MAX_PASSAGES = 4;
 const MAX_KEYWORDS = 5;
 
 export function keywordInstructions(doc: string): string {
@@ -63,10 +63,16 @@ export function answerInstructions(doc: string): string {
     "  section when the passages say nothing about it:",
     "  1. Signature: the exact signature or syntax, in a code block.",
     "  2. What it does: what it is for and when to use it.",
-    "  3. How it works: parameters, return value, behavior, edge cases and errors.",
-    "  4. Example: a short, complete code example with comments.",
+    "  3. How it works: explain every parameter of the signature one by one (with its default),",
+    "     the return value, the behavior, the rules, the edge cases and the errors.",
+    "  4. Examples: complete code examples with comments, enough to show each important use",
+    "     (options, several criteria, common variants). Write the language after the opening",
+    "     fence, for example ```python.",
     "  5. Complexity: for functions, algorithms and data structures only. Use the passages, or",
     '     standard knowledge marked "(general knowledge)".',
+    "- Be complete and precise: do not leave out any detail of the passages that a developer needs",
+    "  to use this correctly (parameters, options, constraints, pitfalls, related functions).",
+    "  No filler, no repetition.",
     "- Apart from the complexity, use only facts from the passages. If they do not answer the",
     "  question, say so plainly instead of guessing.",
     "- Never write URLs or links: the sources are shown under your answer.",

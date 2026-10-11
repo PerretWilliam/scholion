@@ -10,9 +10,9 @@ use crate::error::{AppError, Result};
 
 /// Below this Jaro-Winkler similarity, a name is not a typo of the query.
 const FUZZY_THRESHOLD: f64 = 0.88;
-/// Characters of one passage given to the model. Three passages (~800 tokens each), the prompt
-/// and the answer fit the 4096-token context set in `llm.rs`.
-pub const PASSAGE_CHARS: usize = 3000;
+/// Characters of one passage given to the model. Four passages (~1100 tokens each), the prompt
+/// and the answer fit the 8192-token context set in `llm.rs`.
+pub const PASSAGE_CHARS: usize = 4000;
 
 #[derive(Debug, PartialEq, Serialize)]
 pub struct SearchHit {

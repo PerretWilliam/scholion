@@ -15,7 +15,7 @@ use crate::error::{AppError, Result};
 
 /// Loading a large model from a slow disk can take a while.
 const LOAD_TIMEOUT: Duration = Duration::from_secs(300);
-const CONTEXT_TOKENS: &str = "4096";
+const CONTEXT_TOKENS: &str = "8192";
 
 /// The webview origin allowed by CORS. llama-server echoes `--cors-origins` verbatim in
 /// `Access-Control-Allow-Origin`, so it must be exactly one origin.

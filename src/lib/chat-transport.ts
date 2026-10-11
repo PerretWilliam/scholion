@@ -185,7 +185,7 @@ async function answer(
     model,
     instructions: answerInstructions(title),
     prompt: answerPrompt(question, passages),
-    maxOutputTokens: 1024,
+    maxOutputTokens: 1536,
     temperature: 0.2,
     abortSignal,
   });
