@@ -35,6 +35,8 @@ pub fn run() {
             commands::check_doc_updates,
             commands::install_doc,
             commands::remove_doc,
+            commands::search_doc,
+            commands::get_page,
             commands::get_settings,
             commands::set_settings,
         ])

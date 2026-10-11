@@ -9,6 +9,7 @@ use tauri::State;
 use tauri::ipc::Channel;
 
 use crate::docs::manifest::{self, CachedManifest, DocEntry};
+use crate::docs::search::{self, Page, SearchHit};
 use crate::docs::{InstalledDoc, install, installed_status};
 use crate::error::{AppError, Result};
 use crate::settings::{self, Settings};
@@ -73,6 +74,33 @@ pub async fn install_doc(
 #[tauri::command]
 pub async fn remove_doc(state: State<'_, AppState>, slug: String) -> Result<()> {
     install::remove(&state.data_dir, &slug)
+}
+
+/// Searches an installed doc by entry name, then page text.
+#[tauri::command]
+pub async fn search_doc(
+    state: State<'_, AppState>,
+    slug: String,
+    query: String,
+    limit: usize,
+) -> Result<Vec<SearchHit>> {
+    install::validate_slug(&slug)?;
+    let path = install::doc_path(&state.data_dir, &slug);
+    blocking(move || search::search(&search::open(&path)?, &slug, &query, limit.min(100))).await
+}
+
+#[tauri::command]
+pub async fn get_page(state: State<'_, AppState>, slug: String, path: String) -> Result<Page> {
+    install::validate_slug(&slug)?;
+    let db = install::doc_path(&state.data_dir, &slug);
+    blocking(move || search::get_page(&search::open(&db)?, &slug, &path)).await
+}
+
+/// Runs SQLite work off the async runtime.
+async fn blocking<T: Send + 'static>(f: impl FnOnce() -> Result<T> + Send + 'static) -> Result<T> {
+    tauri::async_runtime::spawn_blocking(f)
+        .await
+        .map_err(|e| AppError::other(format!("Background task failed: {e}")))?
 }
 
 #[tauri::command]

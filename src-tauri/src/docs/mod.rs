@@ -1,5 +1,7 @@
+pub mod html;
 pub mod install;
 pub mod manifest;
+pub mod search;
 
 use serde::Serialize;
 

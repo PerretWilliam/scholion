@@ -20,6 +20,8 @@ const SCHEMA: &str = "
 CREATE TABLE meta (entry TEXT NOT NULL);
 CREATE TABLE entries (id INTEGER PRIMARY KEY, name TEXT NOT NULL, path TEXT NOT NULL, type TEXT NOT NULL);
 CREATE TABLE pages (path TEXT PRIMARY KEY, html TEXT NOT NULL);
+-- Full-text index of each page as Markdown. Contentless: the text lives in `pages.html`.
+CREATE VIRTUAL TABLE pages_fts USING fts5(text, content='', tokenize='porter unicode61');
 ";
 
 /// Slugs come from the frontend and become file names: allow DevDocs' charset only.
@@ -134,19 +136,25 @@ pub fn build_db(index_json: &Path, db_json: &Path, entry: &DocEntry, out: &Path)
     }
     {
         // db.json can reach hundreds of MB: stream it page by page instead of loading it whole.
-        let mut insert = tx.prepare("INSERT INTO pages (path, html) VALUES (?1, ?2)")?;
+        let mut sink = PageSink {
+            pages: tx.prepare("INSERT INTO pages (path, html) VALUES (?1, ?2)")?,
+            fts: tx.prepare("INSERT INTO pages_fts (rowid, text) VALUES (?1, ?2)")?,
+        };
         let mut de = serde_json::Deserializer::from_reader(BufReader::new(File::open(db_json)?));
-        PageSink(&mut insert).deserialize(&mut de)?;
+        (&mut sink).deserialize(&mut de)?;
         de.end()?;
     }
     tx.commit()?;
     Ok(())
 }
 
-/// Inserts each `"path": "<html>"` pair of `db.json` as it is parsed.
-struct PageSink<'a, 'conn>(&'a mut Statement<'conn>);
+/// Inserts and indexes each `"path": "<html>"` pair of `db.json` as it is parsed.
+struct PageSink<'conn> {
+    pages: Statement<'conn>,
+    fts: Statement<'conn>,
+}
 
-impl<'de> DeserializeSeed<'de> for PageSink<'_, '_> {
+impl<'de> DeserializeSeed<'de> for &mut PageSink<'_> {
     type Value = ();
     fn deserialize<D: Deserializer<'de>>(
         self,
@@ -156,15 +164,21 @@ impl<'de> DeserializeSeed<'de> for PageSink<'_, '_> {
     }
 }
 
-impl<'de> Visitor<'de> for PageSink<'_, '_> {
+impl<'de> Visitor<'de> for &mut PageSink<'_> {
     type Value = ();
     fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str("a map of page path to HTML")
     }
     fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> std::result::Result<(), A::Error> {
         while let Some((path, html)) = map.next_entry::<String, String>()? {
-            self.0
-                .execute((path, html))
+            // Index the raw HTML if conversion ever fails: worse ranking beats a missing page.
+            let text = super::html::to_markdown(&html).unwrap_or_else(|_| html.clone());
+            let rowid = self
+                .pages
+                .insert((path, html))
+                .map_err(serde::de::Error::custom)?;
+            self.fts
+                .execute((rowid, text))
                 .map_err(serde::de::Error::custom)?;
         }
         Ok(())
@@ -245,6 +259,15 @@ mod tests {
         };
         assert_eq!(count("entries"), 3);
         assert_eq!(count("pages"), 2);
+        let hit: String = conn
+            .query_row(
+                "SELECT p.path FROM pages_fts f JOIN pages p ON p.rowid = f.rowid \
+                 WHERE pages_fts MATCH 'bytes' ORDER BY rank LIMIT 1",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(hit, "string/byte/memcpy");
         let html: String = conn
             .query_row(
                 "SELECT html FROM pages WHERE path = 'string/byte/strcpy'",
@@ -294,9 +317,17 @@ mod tests {
             let first = super::super::manifest::refresh(&http, data.path(), false)
                 .await
                 .unwrap();
-            let c = first.docs.iter().find(|d| d.slug == "c").unwrap();
-            install(&http, data.path(), c, |_| {}).await.unwrap();
-            assert_eq!(list_installed(data.path()).unwrap(), vec![c.clone()]);
+            // AIDOC_LIVE_SLUG=python~3.15 to time a bigger doc.
+            let slug = std::env::var("AIDOC_LIVE_SLUG").unwrap_or_else(|_| "c".into());
+            let doc = first.docs.iter().find(|d| d.slug == slug).unwrap();
+            let started = std::time::Instant::now();
+            install(&http, data.path(), doc, |_| {}).await.unwrap();
+            let size = fs::metadata(doc_path(data.path(), &slug)).unwrap().len();
+            println!(
+                "Installed {slug} in {:?}, {size} bytes on disk",
+                started.elapsed()
+            );
+            assert_eq!(list_installed(data.path()).unwrap(), vec![doc.clone()]);
             // A forced re-check sees the same redirect target and keeps the cached docs.
             let second = super::super::manifest::refresh(&http, data.path(), true)
                 .await

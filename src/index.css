@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@plugin "@tailwindcss/typography";
 
 /* Follow the OS color scheme; no manual toggle. */
 @custom-variant dark (@media (prefers-color-scheme: dark));

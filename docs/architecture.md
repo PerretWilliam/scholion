@@ -117,12 +117,26 @@ Dev and test model: `unsloth/Qwen3.5-0.8B-GGUF` / `Qwen3.5-0.8B-Q4_K_M.gguf` (0.
 Because llama-server sends `Access-Control-Allow-Origin`, the plain webview `fetch` works.
 `@tauri-apps/plugin-http` is not needed.
 
+## Search (`src-tauri/src/docs/search.rs`)
+
+1. **Entry names**, scored in memory (docs have at most tens of thousands of entries, so this
+   takes a few ms): exact, then prefix, then substring, then typo-tolerant (Jaro-Winkler ≥ 0.88,
+   queries of 3+ chars). Ties go to the shorter name.
+2. **Page full text** fills the remaining slots: FTS5 `porter unicode61`, contentless, over each
+   page converted to Markdown at install time. The query becomes an `OR` of quoted words, so user
+   input is never parsed as FTS syntax. Ranked by bm25.
+
+Measured: installing Python 3.15 (22 MB of HTML) takes ~2 s and 27 MB on disk.
+
+Pages render in the webview as DevDocs HTML **sanitized with DOMPurify**, plus the CSP. Link
+clicks are intercepted: same-doc links open in the app, others in the system browser.
+
 ## Storage layout (`app_data_dir`)
 
 | Path | Content |
 |---|---|
 | `settings.json` | Active model, selected doc per language, auto-update flag, last manifest check |
 | `manifest.json` | Cached DevDocs manifest + stored redirect `Location` |
-| `docs/<slug>.sqlite` | `entries`, `pages`, FTS5 (trigram) index, `meta` (mtime, attribution, version) |
+| `docs/<slug>.sqlite` | `meta` (manifest entry as JSON), `entries`, `pages` (HTML), `pages_fts` (FTS5) |
 | `models/<file>.gguf` | Downloaded models |
 | `tmp/` | In-progress downloads and installs; swapped in atomically on success |

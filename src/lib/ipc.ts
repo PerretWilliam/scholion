@@ -49,6 +49,28 @@ export function installDoc(slug: string, onProgress: (percent: number) => void) 
 
 export const removeDoc = (slug: string) => invoke<void>("remove_doc", { slug });
 
+export interface SearchHit {
+  name: string;
+  /** Entry path, possibly with a `#fragment`. */
+  path: string;
+  type: string;
+  /** Official DevDocs page. */
+  url: string;
+}
+
+export interface Page {
+  path: string;
+  title: string;
+  /** Raw DevDocs HTML: sanitize before rendering. */
+  html: string;
+  url: string;
+}
+
+export const searchDoc = (slug: string, query: string, limit = 30) =>
+  invoke<SearchHit[]>("search_doc", { slug, query, limit });
+
+export const getPage = (slug: string, path: string) => invoke<Page>("get_page", { slug, path });
+
 export const getSettings = () => invoke<Settings>("get_settings");
 
 export const setSettings = (settings: Settings) => invoke<void>("set_settings", { settings });
