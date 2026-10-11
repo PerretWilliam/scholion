@@ -60,7 +60,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: ai-doc ${{ github.ref_name }}
-          releaseBody: See the assets below to download and install ai-doc.
+          releaseName: Scholion ${{ github.ref_name }}
+          releaseBody: See the assets below to download and install Scholion.
           releaseDraft: true
           args: ${{ matrix.args }}

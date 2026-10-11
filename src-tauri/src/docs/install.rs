@@ -317,8 +317,8 @@ mod tests {
             let first = super::super::manifest::refresh(&http, data.path(), false)
                 .await
                 .unwrap();
-            // AIDOC_LIVE_SLUG=python~3.15 to time a bigger doc.
-            let slug = std::env::var("AIDOC_LIVE_SLUG").unwrap_or_else(|_| "c".into());
+            // SCHOLION_LIVE_SLUG=python~3.15 to time a bigger doc.
+            let slug = std::env::var("SCHOLION_LIVE_SLUG").unwrap_or_else(|_| "c".into());
             let doc = first.docs.iter().find(|d| d.slug == slug).unwrap();
             let started = std::time::Instant::now();
             install(&http, data.path(), doc, |_| {}).await.unwrap();

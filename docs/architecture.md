@@ -1,6 +1,6 @@
 # Architecture
 
-Technical reference for ai-doc. Product requirements live in [spec.md](spec.md).
+Technical reference for Scholion. Product requirements live in [spec.md](spec.md).
 Everything marked **Verified** was checked against the live services on 2026-10-11 (Phase 0).
 
 ## Overview
@@ -215,7 +215,7 @@ the chat, which can search docs without a model.
 - The `.deb` and `.rpm` depend on OpenSSL 3 and the Vulkan loader, which the Linux `llama-server`
   links.
 - **Builds are unsigned.** macOS shows a Gatekeeper warning (right-click → Open, or
-  `xattr -dr com.apple.quarantine /Applications/ai-doc.app`), Windows a SmartScreen warning.
+  `xattr -dr com.apple.quarantine /Applications/Scholion.app`), Windows a SmartScreen warning.
   To sign, add the secrets Tauri reads (`APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`,
   `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID` for macOS signing and
   notarization; a certificate in `bundle.windows` for Windows) and pass them to the

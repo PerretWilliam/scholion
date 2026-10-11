@@ -132,11 +132,12 @@ mod tests {
         }
     }
 
-    /// Needs `pnpm fetch:llama` and a GGUF file: AIDOC_LIVE_MODEL=/path/model.gguf
+    /// Needs `pnpm fetch:llama` and a GGUF file: SCHOLION_LIVE_MODEL=/path/model.gguf
     #[tokio::test]
     #[ignore]
     async fn live_start_and_chat() {
-        let model = PathBuf::from(std::env::var("AIDOC_LIVE_MODEL").expect("AIDOC_LIVE_MODEL"));
+        let model =
+            PathBuf::from(std::env::var("SCHOLION_LIVE_MODEL").expect("SCHOLION_LIVE_MODEL"));
         let bin_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/llama");
         let log = tempfile::NamedTempFile::new().unwrap();
         let mut server = spawn(&bin_dir, &model, log.path()).unwrap();

@@ -1,5 +1,6 @@
 import { MessageSquare, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
+import logo from "@/assets/logo.svg";
 import { ChatScreen } from "@/components/chat/ChatScreen";
 import { SettingsScreen } from "@/components/settings/SettingsScreen";
 import { Button } from "@/components/ui/button";
@@ -26,7 +27,10 @@ export default function App() {
   return (
     <div className="flex h-screen flex-col">
       <header className="flex items-center justify-between border-b px-4 py-2">
-        <h1 className="font-semibold text-sm">ai-doc</h1>
+        <h1 className="flex items-center gap-2 font-semibold text-sm">
+          <img src={logo} alt="" className="size-7" />
+          Scholion
+        </h1>
         <nav className="flex gap-1" aria-label="Main">
           <Button
             variant={screen === "chat" ? "secondary" : "ghost"}

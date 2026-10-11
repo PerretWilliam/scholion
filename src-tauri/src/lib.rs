@@ -15,7 +15,7 @@ use tauri::{AppHandle, Emitter, Manager, RunEvent};
 use commands::AppState;
 
 /// Sent with every DevDocs request so the service can identify us.
-pub const USER_AGENT: &str = concat!("ai-doc/", env!("CARGO_PKG_VERSION"));
+pub const USER_AGENT: &str = concat!("Scholion/", env!("CARGO_PKG_VERSION"));
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

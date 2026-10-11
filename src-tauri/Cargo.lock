@@ -18,27 +18,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ai-doc"
-version = "0.1.0"
-dependencies = [
- "fs4",
- "htmd",
- "markup5ever_rcdom",
- "reqwest",
- "rusqlite",
- "serde",
- "serde_json",
- "sha2",
- "strsim",
- "tauri",
- "tauri-build",
- "tauri-plugin-opener",
- "tempfile",
- "thiserror 2.0.21",
- "tokio",
-]
-
-[[package]]
 name = "alloc-no-stdlib"
 version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3452,6 +3431,27 @@ dependencies = [
  "quote",
  "serde_derive_internals",
  "syn 2.0.119",
+]
+
+[[package]]
+name = "scholion"
+version = "0.1.0"
+dependencies = [
+ "fs4",
+ "htmd",
+ "markup5ever_rcdom",
+ "reqwest",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "sha2",
+ "strsim",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-opener",
+ "tempfile",
+ "thiserror 2.0.21",
+ "tokio",
 ]
 
 [[package]]

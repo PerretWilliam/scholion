@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "ai-doc",
+  "productName": "Scholion",
   "version": "0.1.0",
-  "identifier": "com.williamperret.aidoc",
+  "identifier": "com.williamperret.scholion",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "ai-doc",
+        "title": "Scholion",
         "width": 1000,
         "height": 720,
         "minWidth": 480,

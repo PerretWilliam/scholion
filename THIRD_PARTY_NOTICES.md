@@ -1,6 +1,6 @@
 # Third-party notices
 
-ai-doc is released under the [MIT License](LICENSE). It bundles, or downloads at the user's
+Scholion is released under the [MIT License](LICENSE). It bundles, or downloads at the user's
 request, the following third-party software and content.
 
 ## Bundled

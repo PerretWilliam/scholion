@@ -11,7 +11,7 @@ user, which follows the language of the question.
 
 ## What this is
 
-ai-doc is a Tauri 2 desktop app that answers programming questions from locally installed
+Scholion is a Tauri 2 desktop app that answers programming questions from locally installed
 DevDocs documentation, using a local GGUF model served by a bundled `llama-server` (llama.cpp).
 
 - Product spec: [docs/spec.md](docs/spec.md)
@@ -62,7 +62,7 @@ Run `pnpm check` before declaring work done.
 - **Atomic writes:** download into `tmp/`, verify, then rename into place.
 - **Tests:** Vitest next to the code (`*.test.ts`), Rust unit tests in `#[cfg(test)]` modules,
   fixtures under `src-tauri/tests/fixtures/`. Do not hit the network in tests.
-  The live `llama-server` test also needs `AIDOC_LIVE_MODEL=/path/to/model.gguf`.
+  The live `llama-server` test also needs `SCHOLION_LIVE_MODEL=/path/to/model.gguf`.
 - **Formatting:** Biome (2 spaces, 100 cols) and rustfmt defaults. Do not hand-format.
 - **Commits:** Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`, `test:`, `refactor:`, `ci:`).
 - **UI:** follows the OS light/dark scheme via `prefers-color-scheme` (see `src/index.css`).

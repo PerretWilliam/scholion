@@ -1,10 +1,11 @@
-# ai-doc: local documentation assistant
+# Scholion: local documentation assistant
 
 A desktop app that answers questions about a programming language from its official
 documentation, using a small language model that runs locally. Once docs and a model are
 installed, everything works offline.
 
-Working name: `ai-doc` (final name to be decided).
+Name: **Scholion**. A scholion is an explanatory note written in the margin of a manuscript,
+which is what the app writes for documentation.
 
 ## Goal
 

@@ -1,5 +1,5 @@
 [package]
-name = "ai-doc"
+name = "scholion"
 version = "0.1.0"
 description = "Offline documentation assistant powered by a local language model"
 authors = ["William Perret"]
@@ -9,7 +9,7 @@ edition = "2024"
 [lib]
 # The `_lib` suffix avoids a name clash between the lib and bin targets on Windows.
 # See https://github.com/rust-lang/cargo/issues/8519
-name = "ai_doc_lib"
+name = "scholion_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

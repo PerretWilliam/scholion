@@ -1,4 +1,4 @@
-# ai-doc
+# Scholion
 
 Ask questions about a programming language and get short, sourced answers from its official
 documentation, powered by a small language model running entirely on your machine.
@@ -17,7 +17,7 @@ Download the installer for your OS from the GitHub releases page. Builds are not
 macOS, right-click the app and choose Open the first time; on Windows, choose "More info" → "Run
 anyway" in the SmartScreen prompt.
 
-On first launch, ai-doc offers a model (about 3 GB) and a few docs to download. Everything else is
+On first launch, Scholion offers a model (about 3 GB) and a few docs to download. Everything else is
 in Settings.
 
 ## Development

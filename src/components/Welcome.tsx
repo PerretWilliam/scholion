@@ -79,9 +79,9 @@ export function Welcome({ onDone }: { onDone: () => void }) {
   return (
     <div className="mx-auto max-w-2xl space-y-8 p-6">
       <div className="space-y-2">
-        <h2 className="font-semibold text-xl">Welcome to ai-doc</h2>
+        <h2 className="font-semibold text-xl">Welcome to Scholion</h2>
         <p className="text-muted-foreground text-sm">
-          ai-doc answers programming questions from documentation stored on this computer, with a
+          Scholion answers programming questions from documentation stored on this computer, with a
           language model that also runs here. Download both once; after that everything works
           offline.
         </p>
