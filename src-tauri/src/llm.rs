@@ -30,6 +30,7 @@ const APP_ORIGIN: &str = if cfg!(debug_assertions) {
 /// A running server. Dropping it kills the process.
 pub struct LlmServer {
     child: Child,
+    pid_file: PathBuf,
     pub port: u16,
     pub model: PathBuf,
 }
@@ -44,12 +45,47 @@ impl Drop for LlmServer {
     fn drop(&mut self) {
         let _ = self.child.kill();
         let _ = self.child.wait();
+        let _ = std::fs::remove_file(&self.pid_file);
     }
+}
+
+/// Whether `pid` is a running `llama-server`: a recycled pid must never be killed.
+fn is_llama_server(pid: u32) -> bool {
+    let output = if cfg!(windows) {
+        Command::new("tasklist")
+            .args(["/FI", &format!("PID eq {pid}"), "/FO", "CSV", "/NH"])
+            .output()
+    } else {
+        Command::new("ps")
+            .args(["-p", &pid.to_string(), "-o", "comm="])
+            .output()
+    };
+    output.is_ok_and(|o| String::from_utf8_lossy(&o.stdout).contains("llama-server"))
+}
+
+/// Kills the `llama-server` a previous run left behind (the app was killed, or `tauri dev`
+/// restarted), which would otherwise keep holding a model in memory.
+fn stop_stale(pid_file: &Path) {
+    let pid = std::fs::read_to_string(pid_file)
+        .ok()
+        .and_then(|text| text.trim().parse::<u32>().ok());
+    if let Some(pid) = pid.filter(|&pid| is_llama_server(pid)) {
+        let _ = if cfg!(windows) {
+            Command::new("taskkill")
+                .args(["/F", "/PID", &pid.to_string()])
+                .output()
+        } else {
+            Command::new("kill").args(["-9", &pid.to_string()]).output()
+        };
+    }
+    let _ = std::fs::remove_file(pid_file);
 }
 
 /// Spawns `llama-server` from `bin_dir` with `model` on a free local port. Output goes to `log`.
 /// The model is still loading when this returns: see [`wait_until_ready`].
 pub fn spawn(bin_dir: &Path, model: &Path, log: &Path) -> Result<LlmServer> {
+    let pid_file = log.with_file_name("llama-server.pid");
+    stop_stale(&pid_file);
     let port = TcpListener::bind(("127.0.0.1", 0))?.local_addr()?.port();
     let log_file = File::create(log)?;
     let mut command =
@@ -69,8 +105,10 @@ pub fn spawn(bin_dir: &Path, model: &Path, log: &Path) -> Result<LlmServer> {
     let child = command
         .spawn()
         .map_err(|e| AppError::other(format!("Could not start llama-server: {e}")))?;
+    std::fs::write(&pid_file, child.id().to_string())?;
     Ok(LlmServer {
         child,
+        pid_file,
         port,
         model: model.to_owned(),
     })
@@ -123,6 +161,24 @@ pub fn validate_model_file(name: &str) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(unix)]
+    #[test]
+    fn stale_pid_files_never_kill_other_processes() {
+        let dir = tempfile::tempdir().unwrap();
+        let pid_file = dir.path().join("llama-server.pid");
+        let mut other = Command::new("sleep").arg("30").spawn().unwrap();
+        std::fs::write(&pid_file, other.id().to_string()).unwrap();
+        stop_stale(&pid_file);
+        assert!(
+            matches!(other.try_wait(), Ok(None)),
+            "an unrelated process was killed"
+        );
+        assert!(!pid_file.exists());
+        other.kill().unwrap();
+        std::fs::write(&pid_file, "not a pid").unwrap();
+        stop_stale(&pid_file); // garbage is ignored
+    }
 
     #[test]
     fn model_file_names() {

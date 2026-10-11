@@ -250,4 +250,5 @@ the chat, which can search docs without a model.
 | `docs/<slug>.sqlite` | `meta` (manifest entry as JSON), `entries`, `pages` (HTML), `pages_fts` (FTS5) |
 | `models/<file>.gguf` | Downloaded models |
 | `llama-server.log` | Output of the last `llama-server` run |
+| `llama-server.pid` | Pid of the running `llama-server`; a leftover one from a killed run is stopped (only if the process is really `llama-server`) before the next start |
 | `tmp/` | In-progress doc installs and model downloads (`<file>.part`, kept to resume) |
