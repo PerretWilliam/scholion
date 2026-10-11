@@ -1,7 +1,6 @@
 import { MessageSquare, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ChatScreen } from "@/components/chat/ChatScreen";
-import { LanguagePicker } from "@/components/LanguagePicker";
 import { Logo } from "@/components/Logo";
 import { SettingsScreen } from "@/components/settings/SettingsScreen";
 import { Button } from "@/components/ui/button";
@@ -34,7 +33,7 @@ export default function App() {
           <Logo />
           Scholion
         </h1>
-        <nav className="flex items-center gap-1" aria-label={t("app.mainNav")}>
+        <nav className="flex gap-1" aria-label={t("app.mainNav")}>
           <Button
             variant={screen === "chat" ? "secondary" : "ghost"}
             size="sm"
@@ -49,7 +48,6 @@ export default function App() {
           >
             <Settings /> {t("app.settings")}
           </Button>
-          <LanguagePicker />
         </nav>
       </header>
       {/* The chat stays mounted so the conversation survives a visit to Settings. */}

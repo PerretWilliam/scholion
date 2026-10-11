@@ -1,4 +1,3 @@
-import { Globe } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -13,14 +12,13 @@ export function LanguagePicker() {
   const language = useLanguage();
   return (
     <Select value={language} onValueChange={setLanguage}>
-      <SelectTrigger size="sm" aria-label={t("app.language")} className="border-0 shadow-none">
-        <Globe className="size-4" aria-hidden />
+      <SelectTrigger size="sm" aria-label={t("app.language")} className="w-full">
         <SelectValue />
       </SelectTrigger>
       <SelectContent align="end">
-        {LANGUAGES.map(({ code, name, percent }) => (
+        {LANGUAGES.map(({ code, name, flag, percent }) => (
           <SelectItem key={code} value={code}>
-            {t("app.languageOption", { name, percent })}
+            {flag} {t("app.languageOption", { name, percent })}
           </SelectItem>
         ))}
       </SelectContent>

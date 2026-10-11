@@ -24,6 +24,41 @@ export function completeness(messages: Messages): number {
   return Math.floor((keys.filter((k) => messages[k]?.trim()).length / keys.length) * 100);
 }
 
+/** Country shown for a language with no region in its code (`pt-BR` carries its own). */
+const DEFAULT_REGION: Record<string, string> = {
+  en: "GB",
+  fr: "FR",
+  es: "ES",
+  de: "DE",
+  it: "IT",
+  pt: "PT",
+  nl: "NL",
+  pl: "PL",
+  ru: "RU",
+  uk: "UA",
+  tr: "TR",
+  sv: "SE",
+  da: "DK",
+  cs: "CZ",
+  id: "ID",
+  vi: "VN",
+  ja: "JP",
+  ko: "KR",
+  hi: "IN",
+  el: "GR",
+  zh: "CN",
+};
+
+/** Flag emoji of a language code: its region (`pt-BR` → 🇧🇷), else the usual country, else 🌐. */
+export function flagOf(code: string): string {
+  const [language = "", ...rest] = code.split("-");
+  const region =
+    rest.find((part) => /^[A-Za-z]{2}$/.test(part))?.toUpperCase() ?? DEFAULT_REGION[language];
+  return region
+    ? String.fromCodePoint(...[...region].map((letter) => 0x1f1a5 + letter.charCodeAt(0)))
+    : "🌐";
+}
+
 /** Languages by name, each in its own language, with how much of the interface it covers. */
 export const LANGUAGES = Object.entries(catalogs)
   .map(([code, messages]) => {
@@ -34,7 +69,7 @@ export const LANGUAGES = Object.entries(catalogs)
     } catch {
       // An engine without that language name: the code stands in.
     }
-    return { code, name, percent: completeness(messages) };
+    return { code, name, flag: flagOf(code), percent: completeness(messages) };
   })
   .sort((a, b) => a.name.localeCompare(b.name));
 
