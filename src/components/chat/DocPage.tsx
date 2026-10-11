@@ -1,9 +1,19 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
 import DOMPurify from "dompurify";
-import { ArrowLeft, ExternalLink, Maximize2, Minimize2 } from "lucide-react";
-import { createContext, useEffect, useMemo, useRef } from "react";
+import {
+  ArrowDown,
+  ArrowLeft,
+  ArrowUp,
+  ExternalLink,
+  Maximize2,
+  Minimize2,
+  Search,
+  X,
+} from "lucide-react";
+import { createContext, useEffect, useMemo, useRef, useState } from "react";
 import { codeToHtml } from "shiki";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import type { Page } from "@/lib/ipc";
 
 /** Opens a page of an installed doc (entry path) in the reader next to the chat. */
@@ -62,6 +72,44 @@ export function resolveDocLink(
   return null;
 }
 
+/** Offsets of every case-insensitive occurrence of `query` in `text`. */
+export function matchOffsets(text: string, query: string): number[] {
+  const q = query.toLowerCase();
+  const t = text.toLowerCase();
+  const offsets: number[] = [];
+  for (let i = q ? t.indexOf(q) : -1; i >= 0; i = t.indexOf(q, i + q.length)) offsets.push(i);
+  return offsets;
+}
+
+const MAX_MATCHES = 1000;
+
+/** One range per match inside a single text node: a match split by a tag is not found. */
+function findRanges(root: HTMLElement, query: string): Range[] {
+  const ranges: Range[] = [];
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  for (
+    let node = walker.nextNode();
+    node && ranges.length < MAX_MATCHES;
+    node = walker.nextNode()
+  ) {
+    for (const start of matchOffsets(node.nodeValue ?? "", query)) {
+      const range = document.createRange();
+      range.setStart(node, start);
+      range.setEnd(node, start + query.length);
+      ranges.push(range);
+    }
+  }
+  return ranges;
+}
+
+/** The WebView may predate the CSS Custom Highlight API: then there is no find bar. */
+const canFind = typeof CSS !== "undefined" && "highlights" in CSS;
+
+function clearFind() {
+  CSS.highlights.delete("find");
+  CSS.highlights.delete("find-current");
+}
+
 /** Code blocks longer than this stay plain: highlighting them would freeze the window. */
 const MAX_HIGHLIGHT_CHARS = 20_000;
 
@@ -102,6 +150,13 @@ export function DocPage({
   const html = useMemo(() => DOMPurify.sanitize(page.html), [page.html]);
 
   const body = useRef<HTMLDivElement>(null);
+  const searchField = useRef<HTMLInputElement>(null);
+  /** Text search in the page: null while the bar is closed. */
+  const [find, setFind] = useState<{ query: string; current: number } | null>(null);
+  const [matches, setMatches] = useState(0);
+  const ranges = useRef<Range[]>([]);
+  /** Bumped when highlighted code replaces text nodes, which invalidates the ranges. */
+  const [highlighted, setHighlighted] = useState(0);
 
   // An entry path can point into a long page: show that section. Highlighting changes the
   // height of the blocks above it, so the scroll waits for it.
@@ -111,11 +166,59 @@ export function DocPage({
     const id = decodeURIComponent(new URL(page.url).hash.slice(1));
     const show = () => id && document.getElementById(id)?.scrollIntoView();
     show();
-    if (body.current) highlightCode(body.current, () => stale).then(() => !stale && show());
+    if (body.current)
+      highlightCode(body.current, () => stale).then(() => {
+        if (stale) return;
+        show();
+        setHighlighted((n) => n + 1);
+      });
     return () => {
       stale = true;
     };
   }, [html]);
+
+  const query = find?.query;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `html` and `highlighted` change the text nodes.
+  useEffect(() => {
+    if (!canFind || !body.current || !query) {
+      ranges.current = [];
+      setMatches(0);
+      return;
+    }
+    ranges.current = findRanges(body.current, query);
+    setMatches(ranges.current.length);
+    CSS.highlights.set("find", new Highlight(...ranges.current));
+    return clearFind;
+  }, [query, html, highlighted]);
+
+  const current = find?.current ?? 0;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `matches` changes the ranges.
+  useEffect(() => {
+    const range = ranges.current[current];
+    if (!canFind || !range) return;
+    CSS.highlights.set("find-current", new Highlight(range));
+    range.startContainer.parentElement?.scrollIntoView({ block: "center" });
+  }, [current, matches]);
+
+  // ⌘/Ctrl+F opens the find bar instead of the webview's own, which does not exist.
+  useEffect(() => {
+    if (!canFind) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "f") {
+        e.preventDefault();
+        setFind((f) => f ?? { query: "", current: 0 });
+        searchField.current?.focus();
+        searchField.current?.select();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  function step(delta: number) {
+    if (matches === 0) return;
+    setFind((f) => f && { ...f, current: (f.current + delta + matches) % matches });
+  }
 
   function handleClick(event: React.MouseEvent<HTMLElement>) {
     const anchor = (event.target as HTMLElement).closest("a");
@@ -140,6 +243,16 @@ export function DocPage({
           <ArrowLeft /> {backLabel}
         </Button>
         <div className="flex gap-2">
+          {canFind && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setFind((f) => (f ? null : { query: "", current: 0 }))}
+              aria-pressed={!!find}
+            >
+              <Search /> Find
+            </Button>
+          )}
           {onToggleExpanded && (
             <Button variant="outline" size="sm" onClick={onToggleExpanded}>
               {expanded ? <Minimize2 /> : <Maximize2 />}
@@ -151,6 +264,50 @@ export function DocPage({
           </Button>
         </div>
       </div>
+      {find && (
+        <div className="sticky top-0 z-10 flex items-center gap-1 rounded-md border bg-background p-1 shadow-sm">
+          <Input
+            ref={searchField}
+            type="search"
+            aria-label="Find in this page"
+            placeholder="Find in this page…"
+            className="h-8 flex-1"
+            value={find.query}
+            autoFocus
+            onChange={(e) => setFind({ query: e.target.value, current: 0 })}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") step(e.shiftKey ? -1 : 1);
+              if (e.key === "Escape") {
+                // Not also leaving full screen.
+                e.stopPropagation();
+                setFind(null);
+              }
+            }}
+          />
+          <span className="min-w-14 text-center text-muted-foreground text-xs" aria-live="polite">
+            {find.query && (matches ? `${current + 1} / ${matches}` : "No match")}
+          </span>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Previous match"
+            onClick={() => step(-1)}
+          >
+            <ArrowUp />
+          </Button>
+          <Button variant="ghost" size="icon-sm" aria-label="Next match" onClick={() => step(1)}>
+            <ArrowDown />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Close find"
+            onClick={() => setFind(null)}
+          >
+            <X />
+          </Button>
+        </div>
+      )}
       {/* biome-ignore lint/a11y/useKeyWithClickEvents: delegates clicks on links, which are keyboard-activatable themselves. */}
       {/* biome-ignore lint/a11y/noStaticElementInteractions: same as above. */}
       <div

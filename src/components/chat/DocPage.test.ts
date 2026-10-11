@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { entryPath, resolveDocLink } from "@/components/chat/DocPage";
+import { entryPath, matchOffsets, resolveDocLink } from "@/components/chat/DocPage";
 
 const pageUrl = "https://devdocs.io/c/string/byte/strcpy";
 
@@ -41,5 +41,14 @@ describe("entryPath", () => {
     expect(entryPath("c", "https://devdocs.io/c/string/byte/memcpy#Example")).toBe(
       "string/byte/memcpy#Example",
     );
+  });
+});
+
+describe("matchOffsets", () => {
+  it("finds every occurrence, ignoring case, without overlaps", () => {
+    expect(matchOffsets("Sort sorted SORT", "sort")).toEqual([0, 5, 12]);
+    expect(matchOffsets("aaaa", "aa")).toEqual([0, 2]);
+    expect(matchOffsets("abc", "")).toEqual([]);
+    expect(matchOffsets("abc", "x")).toEqual([]);
   });
 });

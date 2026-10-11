@@ -139,3 +139,13 @@
     color: var(--shiki-dark);
   }
 }
+
+/* Matches of the find bar in doc pages. */
+::highlight(find) {
+  background-color: oklch(0.9 0.15 95 / 0.6);
+  color: inherit;
+}
+::highlight(find-current) {
+  background-color: oklch(0.75 0.17 55);
+  color: black;
+}
