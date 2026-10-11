@@ -147,7 +147,10 @@ export function DocPage({
   onNavigate,
 }: DocPageProps) {
   // DevDocs HTML is third-party content rendered next to the IPC bridge: always sanitize.
-  const html = useMemo(() => DOMPurify.sanitize(page.html), [page.html]);
+  const html = useMemo(
+    () => DOMPurify.sanitize(page.html, { FORBID_TAGS: ["style", "form"], FORBID_ATTR: ["style"] }),
+    [page.html],
+  );
 
   const body = useRef<HTMLDivElement>(null);
   const searchField = useRef<HTMLInputElement>(null);

@@ -28,6 +28,7 @@ import {
   keywordInstructions,
   keywordMessages,
   MAX_PASSAGES,
+  needsRewrite,
   parseFollowUps,
   parseKeywords,
   parseRewrite,
@@ -181,7 +182,7 @@ async function answer(
   status("Searching the docs…");
   const title = docTitle(doc);
   let question = asked;
-  if (history.length) {
+  if (history.length && needsRewrite(asked)) {
     // "And with a dict?" means nothing alone: make it standalone from the conversation.
     try {
       const { text } = await generateText({

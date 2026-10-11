@@ -35,6 +35,7 @@ import {
   createChatTransport,
   type Sources,
 } from "@/lib/chat-transport";
+import { linkCitations } from "@/lib/prompts";
 
 interface ChatProps {
   context: RefObject<ChatContext>;
@@ -183,14 +184,7 @@ function AssistantMessage() {
       <MessagePrimitive.Parts
         components={{
           Text: ({ text, status }) => (
-            <Streamdown
-              className="text-sm"
-              isAnimating={status.type === "running"}
-              plugins={{ code }}
-              components={markdownComponents}
-            >
-              {text}
-            </Streamdown>
+            <AnswerText text={text} running={status.type === "running"} />
           ),
           data: {
             by_name: {
@@ -267,14 +261,55 @@ function FollowUps() {
   );
 }
 
-function SourcesFooter() {
-  const openDoc = useContext(OpenDocContext);
-  const sources = useAuiState(
+/** Sources of the current message, once the pipeline has found them. */
+function useSources(): Sources | undefined {
+  return useAuiState(
     (s) =>
       s.message.parts.find((p) => p.type === "data" && p.name === "sources") as
         | { data: Sources }
         | undefined,
   )?.data;
+}
+
+/** The answer text; a `[n]` citation opens the n-th source in the reader. */
+function AnswerText({ text, running }: { text: string; running: boolean }) {
+  const openDoc = useContext(OpenDocContext);
+  const sources = useSources();
+  const components = useMemo(
+    () =>
+      ({
+        a: ({ href, children }: ComponentProps<"a">) => {
+          const page = href?.startsWith("#cite-") ? sources?.pages[+href.slice(6) - 1] : undefined;
+          if (!sources || !page) return <ExternalLink href={href}>{children}</ExternalLink>;
+          return (
+            <button
+              type="button"
+              title={page.title}
+              className="align-baseline text-primary hover:underline"
+              onClick={() => openDoc(sources.slug, entryPath(sources.slug, page.url))}
+            >
+              {children}
+            </button>
+          );
+        },
+      }) as Components,
+    [sources, openDoc],
+  );
+  return (
+    <Streamdown
+      className="text-sm"
+      isAnimating={running}
+      plugins={{ code }}
+      components={components}
+    >
+      {linkCitations(text, sources?.pages.length ?? 0)}
+    </Streamdown>
+  );
+}
+
+function SourcesFooter() {
+  const openDoc = useContext(OpenDocContext);
+  const sources = useSources();
   // DevDocs attribution is HTML from a third party: always sanitize.
   const attribution = useMemo(
     () => (sources ? DOMPurify.sanitize(sources.attribution) : ""),
@@ -320,6 +355,3 @@ function ExternalLink({ href, children }: ComponentProps<"a">) {
     </a>
   );
 }
-
-// Streamdown's index signature rejects the precise `a` props type.
-const markdownComponents = { a: ExternalLink } as Components;

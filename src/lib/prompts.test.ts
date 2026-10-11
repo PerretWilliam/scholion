@@ -3,6 +3,8 @@ import type { SearchHit } from "@/lib/ipc";
 import {
   answerInstructions,
   answerPrompt,
+  linkCitations,
+  needsRewrite,
   parseFollowUps,
   parseKeywords,
   parseRewrite,
@@ -93,5 +95,24 @@ describe("rewrite", () => {
       "How do I sort a dict?",
     );
     expect(parseRewrite("  \n", "x")).toBe("x");
+  });
+});
+
+describe("linkCitations", () => {
+  it("links existing passages only, and leaves code alone", () => {
+    const text = "Use it [1][3]. `a[1]` and\n```py\nx[2]\n```\nSee [2](https://x.y).";
+    expect(linkCitations(text, 2)).toBe(
+      "Use it [\\[1\\]](#cite-1)[3]. `a[1]` and\n```py\nx[2]\n```\nSee [2](https://x.y).",
+    );
+  });
+});
+
+describe("needsRewrite", () => {
+  it("rewrites short or referring questions only", () => {
+    expect(needsRewrite("And with a dict?")).toBe(true);
+    expect(needsRewrite("How can I sort a list of dictionaries by one of their keys?")).toBe(false);
+    expect(needsRewrite("How can I sort a list of dictionaries and reverse it afterwards?")).toBe(
+      true,
+    );
   });
 });

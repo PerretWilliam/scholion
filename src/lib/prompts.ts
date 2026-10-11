@@ -52,6 +52,20 @@ export interface Turn {
 export const REWRITE_TURNS = 4;
 const REWRITE_TURN_CHARS = 400;
 
+/**
+ * Whether a question may lean on the conversation: short, or with a reference word. A long
+ * question without one stands alone, and rewriting it would only risk drifting from its meaning.
+ */
+export function needsRewrite(question: string): boolean {
+  const words = question.split(/\s+/).filter(Boolean);
+  return (
+    words.length <= 7 ||
+    /\b(it|its|that|this|these|those|them|same|also|again|ça|cela|celui|celle|ce|cette|aussi|même|encore)\b/i.test(
+      question,
+    )
+  );
+}
+
 export function rewriteInstructions(doc: string): string {
   return [
     `You prepare a question for a search in the ${doc} documentation.`,
@@ -123,6 +137,23 @@ export function answerInstructions(doc: string): string {
     '  is either left out or marked "(general knowledge)". Never cite a passage you did not use.',
     "- Never write URLs or links: the sources are shown under your answer.",
   ].join("\n");
+}
+
+/**
+ * Turns the `[n]` citations of an answer into links to `#cite-n`, for the passages that exist.
+ * Code is left alone.
+ */
+export function linkCitations(text: string, count: number): string {
+  return text
+    .split(/(```[\s\S]*?(?:```|$)|`[^`\n]*`)/)
+    .map((part, i) =>
+      i % 2
+        ? part
+        : part.replace(/\[(\d{1,2})\](?!\()/g, (all, n) =>
+            +n >= 1 && +n <= count ? `[\\[${n}\\]](#cite-${n})` : all,
+          ),
+    )
+    .join("");
 }
 
 export const MAX_FOLLOW_UPS = 3;
