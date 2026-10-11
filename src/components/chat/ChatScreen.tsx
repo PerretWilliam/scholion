@@ -40,6 +40,7 @@ import {
   setSettings,
 } from "@/lib/ipc";
 import { PROVIDERS, type ProviderId } from "@/lib/providers";
+import { cn } from "@/lib/utils";
 
 /** Select value of the "open Settings" item in both pickers. */
 const MANAGE = "manage";
@@ -70,6 +71,8 @@ export function ChatScreen({ visible, onOpenSettings }: Props) {
   const [exported, setExported] = useState<string | null>(null);
   /** Doc page open in the reader next to the chat. */
   const [reader, setReader] = useState<{ slug: string; page: Page } | null>(null);
+  /** The reader fills the window. */
+  const [readerFull, setReaderFull] = useState(false);
   /** Conversations answering right now. */
   const [busy, setBusy] = useState<ReadonlySet<string>>(new Set());
 
@@ -209,6 +212,13 @@ export function ChatScreen({ visible, onOpenSettings }: Props) {
     if (id === currentId) open(crypto.randomUUID());
   }
 
+  useEffect(() => {
+    if (!readerFull) return;
+    const onEscape = (e: KeyboardEvent) => e.key === "Escape" && setReaderFull(false);
+    window.addEventListener("keydown", onEscape);
+    return () => window.removeEventListener("keydown", onEscape);
+  }, [readerFull]);
+
   // Shortcuts: ⌘/Ctrl+N new chat, +K question field, +D next doc (with Shift: previous).
   useEffect(() => {
     if (!visible) return;
@@ -334,15 +344,25 @@ export function ChatScreen({ visible, onOpenSettings }: Props) {
                 <aside
                   key={reader.page.url}
                   aria-label="Documentation page"
-                  className="fixed inset-0 z-20 overflow-y-auto bg-background p-4 lg:static lg:z-auto lg:w-[32rem] lg:shrink-0 lg:border-l"
+                  className={cn(
+                    "fixed inset-0 z-20 overflow-y-auto bg-background p-4",
+                    !readerFull && "lg:static lg:z-auto lg:w-[32rem] lg:shrink-0 lg:border-l",
+                  )}
                 >
-                  <DocPage
-                    slug={reader.slug}
-                    page={reader.page}
-                    backLabel="Close"
-                    onBack={() => setReader(null)}
-                    onNavigate={(path) => openDoc(reader.slug, path)}
-                  />
+                  <div className={cn(readerFull && "mx-auto max-w-4xl")}>
+                    <DocPage
+                      slug={reader.slug}
+                      page={reader.page}
+                      backLabel="Close"
+                      expanded={readerFull}
+                      onToggleExpanded={() => setReaderFull((full) => !full)}
+                      onBack={() => {
+                        setReader(null);
+                        setReaderFull(false);
+                      }}
+                      onNavigate={(path) => openDoc(reader.slug, path)}
+                    />
+                  </div>
                 </aside>
               )}
             </div>

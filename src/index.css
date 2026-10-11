@@ -129,3 +129,13 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Code highlighted by shiki in doc pages: one set of token colors per color scheme. */
+.shiki span {
+  color: var(--shiki-light);
+}
+@media (prefers-color-scheme: dark) {
+  .shiki span {
+    color: var(--shiki-dark);
+  }
+}

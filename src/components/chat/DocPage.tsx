@@ -1,7 +1,8 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
 import DOMPurify from "dompurify";
-import { ArrowLeft, ExternalLink } from "lucide-react";
-import { createContext, useEffect, useMemo } from "react";
+import { ArrowLeft, ExternalLink, Maximize2, Minimize2 } from "lucide-react";
+import { createContext, useEffect, useMemo, useRef } from "react";
+import { codeToHtml } from "shiki";
 import { Button } from "@/components/ui/button";
 import type { Page } from "@/lib/ipc";
 
@@ -18,6 +19,9 @@ interface DocPageProps {
   page: Page;
   /** Label of the back button. */
   backLabel?: string;
+  /** Shows a button to fill the window, or to leave it again when `expanded`. */
+  expanded?: boolean;
+  onToggleExpanded?: () => void;
   onBack: () => void;
   /** Opens another page of the same doc, given its entry path. */
   onNavigate: (path: string) => void;
@@ -58,15 +62,60 @@ export function resolveDocLink(
   return null;
 }
 
-export function DocPage({ slug, page, backLabel = "Results", onBack, onNavigate }: DocPageProps) {
+/** Code blocks longer than this stay plain: highlighting them would freeze the window. */
+const MAX_HIGHLIGHT_CHARS = 20_000;
+
+/**
+ * Colors the `<pre data-language>` blocks of a rendered page, following the OS color scheme.
+ * Unknown languages stay plain.
+ */
+async function highlightCode(root: HTMLElement, isStale: () => boolean) {
+  for (const pre of root.querySelectorAll<HTMLElement>("pre[data-language]")) {
+    const code = pre.textContent ?? "";
+    if (code.length > MAX_HIGHLIGHT_CHARS) continue;
+    try {
+      const colored = await codeToHtml(code, {
+        lang: pre.dataset.language ?? "text",
+        themes: { light: "github-light", dark: "github-dark" },
+        defaultColor: false,
+        structure: "inline",
+      });
+      if (isStale()) return;
+      pre.innerHTML = colored;
+      pre.classList.add("shiki");
+    } catch {
+      // A language shiki does not know: the block stays plain text.
+    }
+  }
+}
+
+export function DocPage({
+  slug,
+  page,
+  backLabel = "Results",
+  expanded,
+  onToggleExpanded,
+  onBack,
+  onNavigate,
+}: DocPageProps) {
   // DevDocs HTML is third-party content rendered next to the IPC bridge: always sanitize.
   const html = useMemo(() => DOMPurify.sanitize(page.html), [page.html]);
 
-  // An entry path can point into a long page: show that section.
+  const body = useRef<HTMLDivElement>(null);
+
+  // An entry path can point into a long page: show that section. Highlighting changes the
+  // height of the blocks above it, so the scroll waits for it.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs once per page.
   useEffect(() => {
+    let stale = false;
     const id = decodeURIComponent(new URL(page.url).hash.slice(1));
-    if (id) document.getElementById(id)?.scrollIntoView();
-  }, [page.url]);
+    const show = () => id && document.getElementById(id)?.scrollIntoView();
+    show();
+    if (body.current) highlightCode(body.current, () => stale).then(() => !stale && show());
+    return () => {
+      stale = true;
+    };
+  }, [html]);
 
   function handleClick(event: React.MouseEvent<HTMLElement>) {
     const anchor = (event.target as HTMLElement).closest("a");
@@ -90,14 +139,23 @@ export function DocPage({ slug, page, backLabel = "Results", onBack, onNavigate 
         <Button variant="ghost" size="sm" onClick={onBack}>
           <ArrowLeft /> {backLabel}
         </Button>
-        <Button variant="outline" size="sm" onClick={() => openUrl(page.url)}>
-          <ExternalLink /> Open on devdocs.io
-        </Button>
+        <div className="flex gap-2">
+          {onToggleExpanded && (
+            <Button variant="outline" size="sm" onClick={onToggleExpanded}>
+              {expanded ? <Minimize2 /> : <Maximize2 />}
+              {expanded ? "Exit full screen" : "Full screen"}
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={() => openUrl(page.url)}>
+            <ExternalLink /> Open on devdocs.io
+          </Button>
+        </div>
       </div>
       {/* biome-ignore lint/a11y/useKeyWithClickEvents: delegates clicks on links, which are keyboard-activatable themselves. */}
       {/* biome-ignore lint/a11y/noStaticElementInteractions: same as above. */}
       <div
         className="prose prose-sm dark:prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none"
+        ref={body}
         onClick={handleClick}
         // biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized with DOMPurify above.
         dangerouslySetInnerHTML={{ __html: html }}
