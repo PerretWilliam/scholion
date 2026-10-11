@@ -26,5 +26,9 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # v1 changes how existing releases are updated: check it against release-please's notes first.
+      - dependency-name: tauri-apps/tauri-action
+        update-types: ["version-update:semver-major"]
     commit-message:
       prefix: ci
