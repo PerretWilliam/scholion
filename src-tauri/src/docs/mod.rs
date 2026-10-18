@@ -3,6 +3,8 @@ pub mod install;
 pub mod intent;
 pub mod manifest;
 pub mod search;
+#[cfg(test)]
+mod search_bench;
 
 use serde::Serialize;
 
