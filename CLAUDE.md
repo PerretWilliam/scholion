@@ -65,6 +65,8 @@ Run `pnpm check` before declaring work done.
 - **Tests:** Vitest next to the code (`*.test.ts`), Rust unit tests in `#[cfg(test)]` modules,
   fixtures under `src-tauri/tests/fixtures/`. Do not hit the network in tests.
   The live `llama-server` test also needs `SCHOLION_LIVE_MODEL=/path/to/model.gguf`.
+  The retrieval benchmark (`search_bench.rs`) needs `SCHOLION_DATA_DIR=<app data dir>` with the
+  Python and React docs installed: run it after touching `search.rs` or the keyword prompt.
 - **Formatting:** Biome (2 spaces, 100 cols) and rustfmt defaults. Do not hand-format.
 - **Commits:** Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`, `test:`, `refactor:`, `ci:`).
 - **UI:** follows the OS light/dark scheme via `prefers-color-scheme` (see `src/index.css`).
